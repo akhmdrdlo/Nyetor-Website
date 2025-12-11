@@ -1,0 +1,212 @@
+:root {
+    --primary: #00f3ff;
+    --primary-dark: #00c7d1;
+    --secondary: #7000ff;
+    --bg-dark: #0a0a0a;
+    --bg-card: #161616;
+    --text-main: #ffffff;
+    --text-muted: #a0a0a0;
+    --glass: rgba(22, 22, 22, 0.8);
+    --border: #333;
+    --radius: 12px;
+    --font-main: 'Inter', sans-serif;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    background-color: var(--bg-dark);
+    color: var(--text-main);
+    font-family: var(--font-main);
+    line-height: 1.6;
+    overflow-x: hidden;
+}
+
+/* Typography */
+h1, h2, h3 {
+    font-weight: 700;
+    letter-spacing: -0.02em;
+}
+
+h1 {
+    font-size: 2.5rem;
+    background: linear-gradient(to right, var(--text-main), var(--primary));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+/* Layout */
+.container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 2rem 1rem;
+}
+
+/* Components */
+.card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    transition: transform 0.2s, border-color 0.2s;
+    backdrop-filter: blur(10px);
+}
+
+.card:hover {
+    border-color: var(--primary);
+    transform: translateY(-2px);
+}
+
+.btn {
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    padding: 1rem;
+    background: var(--primary);
+    color: #000;
+    font-weight: 600;
+    border: none;
+    border-radius: var(--radius);
+    cursor: pointer;
+    font-size: 1rem;
+    transition: all 0.2s;
+    text-decoration: none;
+}
+
+.btn:hover {
+    background: var(--primary-dark);
+    box-shadow: 0 0 15px rgba(0, 243, 255, 0.3);
+}
+
+/* Form Styling */
+.form-group {
+    margin-bottom: 1.25rem;
+}
+
+label {
+    display: block;
+    margin-bottom: 0.5rem;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+}
+
+input, select, textarea {
+    width: 100%;
+    padding: 0.8rem;
+    background: #222;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text-main);
+    font-family: inherit;
+    font-size: 1rem;
+    transition: border-color 0.2s;
+}
+
+input:focus, select:focus, textarea:focus {
+    outline: none;
+    border-color: var(--primary);
+    background: #2a2a2a;
+}
+
+/* Price Display */
+.price-display {
+    text-align: right;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--primary);
+    margin: 1rem 0;
+}
+
+/* Invoice Hidden Container */
+#invoice-container {
+    position: absolute;
+    top: -9999px;
+    left: -9999px;
+    width: 800px; /* A4 Width approximation for PDF */
+    background: white;
+    color: black;
+    padding: 40px;
+}
+
+/* Utility to ensure invoice text is visible in PDF */
+.invoice-box {
+    color: #000;
+    font-family: 'Helvetica', sans-serif;
+}
+
+.invoice-header {
+    display: flex;
+    justify-content: space-between;
+    border-bottom: 2px solid #00f3ff;
+    padding-bottom: 20px;
+    margin-bottom: 30px;
+}
+
+.invoice-logo h2 {
+    color: #004aad !important; /* Blue Invoice Color */
+    -webkit-text-fill-color: initial;
+    font-size: 2rem;
+}
+
+.invoice-details {
+    margin-bottom: 30px;
+}
+
+.invoice-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.invoice-table th, .invoice-table td {
+    padding: 12px;
+    text-align: left;
+    border-bottom: 1px solid #ddd;
+}
+
+.invoice-table th {
+    background-color: #004aad;
+    color: white;
+}
+
+.total-row {
+    font-weight: bold;
+    font-size: 1.2rem;
+    background-color: #f8f9fa;
+}
+
+/* WhatsApp Modal */
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.8);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s;
+    z-index: 1000;
+}
+
+.modal.active {
+    opacity: 1;
+    pointer-events: all;
+}
+
+.modal-content {
+    background: var(--bg-card);
+    padding: 2rem;
+    border-radius: var(--radius);
+    max-width: 400px;
+    text-align: center;
+    border: 1px solid var(--primary);
+}
