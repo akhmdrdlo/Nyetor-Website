@@ -11,42 +11,36 @@ const Invoice = forwardRef(({ data }, ref) => {
             <div className="absolute top-0 left-0 w-full h-4 bg-[#004aad]"></div>
 
             {/* Header */}
-            <div className="flex justify-between items-end border-b-2 border-gray-200 pb-5 mb-8 mt-6">
-                <div>
-                    {/* LOGO PLACEHOLDER */}
-                    <div className="flex items-center gap-2 mb-2">
-                        {/* Use the uploaded image as logo if relevant, for now simple text/icon */}
-                        <h1 className="text-4xl font-black text-[#004aad] italic tracking-tighter">NYETOR<span className="text-black">.ID</span></h1>
-                        {/* <img src="/logo.png" alt="Nyetor Logo" className="h-10" /> */}
+            <div className="flex justify-between items-center border-b-2 border-gray-200 pb-4 mb-6 mt-6">
+                <div className="flex items-center gap-4">
+                    <img src="/Nyetor Logo Transparent.png" alt="Nyetor Logo" className="h-16" />
+                    <div>
+                        <h2 className="text-xl font-bold text-[#004aad] uppercase tracking-wide">NYETOR.ID</h2>
+                        <p className="text-xs text-gray-500 leading-snug">
+                            Gang Sanusi, Cipadung, Cibiru, Bandung<br />
+                            WA: 087818747396 | IG: @nyewainmotornyetor
+                        </p>
                     </div>
-
-                    <h2 className="text-xl font-bold text-[#004aad] uppercase tracking-wide">NYETOR.ID</h2>
-                    <p className="text-sm text-gray-500 mt-1 leading-relaxed">
-                        Gang Sanusi, Cipadung, Cibiru, Kota Bandung<br />
-                        087818747396<br />
-                        @nyewainmotornyetor
-                    </p>
                 </div>
                 <div className="text-right">
-                    <h2 className="text-4xl font-bold text-gray-200">INVOICE</h2>
-                    <p className="mt-1 font-semibold text-gray-600">{date}</p>
-                    <div className="mt-4 inline-block border-2 border-red-600 text-red-600 px-3 py-1 font-bold text-lg rounded transform -rotate-12">
+                    <h2 className="text-3xl font-bold text-gray-200 tracking-widest">INVOICE</h2>
+                    <p className="mt-1 font-semibold text-gray-500 text-sm">{date}</p>
+                    <div className="mt-2 inline-block border-2 border-red-600 text-red-600 px-2 py-0.5 font-bold text-sm rounded transform -rotate-6">
                         BELUM LUNAS
                     </div>
                 </div>
             </div>
 
-            {/* Details */}
-            <div className="flex justify-between mb-8 bg-gray-50 p-6 rounded-lg">
+            {/* Details - Compact */}
+            <div className="bg-gray-50 p-4 rounded-lg mb-6 flex justify-between items-center border border-gray-100">
                 <div>
-                    <strong className="block text-xs uppercase text-gray-400 tracking-wider mb-1">Kepada Customer</strong>
-                    <p className="font-bold text-xl text-[#004aad]">{name}</p>
-                    <p className="text-gray-600">{phone}</p>
+                    <strong className="text-xs uppercase text-gray-400 tracking-wider">Penyewa</strong>
+                    <div className="flex items-baseline gap-2">
+                        <span className="font-bold text-lg text-[#004aad]">{name}</span>
+                        <span className="text-sm text-gray-600">({phone})</span>
+                    </div>
                 </div>
-                <div className="text-right">
-                    <strong className="block text-xs uppercase text-gray-400 tracking-wider mb-1">No. Order</strong>
-                    <p className="font-mono text-xl font-bold">{orderNo}</p>
-                </div>
+                {/* Removed Order No as requested to save space */}
             </div>
 
             {/* Table */}
@@ -103,8 +97,8 @@ const Invoice = forwardRef(({ data }, ref) => {
                 <div className="w-48">
                     <p className="mb-4 italic text-sm">Pemilik</p>
                     {/* Placeholder Signature */}
-                    <div className="h-16 flex items-end justify-center">
-                        <span className="font-handwriting text-2xl text-gray-400 font-bold opacity-50 absolute" style={{ fontFamily: 'cursive', transform: 'rotate(-10deg) translate(20px, -20px)' }}>Rafif Sunu</span>
+                    <div className="h-16 flex items-end justify-center relative">
+                        <img src="/ttd_bos.png" alt="Signature" className="h-20 object-contain absolute bottom-0" />
                     </div>
 
                     <p className="border-t border-black font-bold pt-2 mt-2">Rafif Sunu Fauzi</p>

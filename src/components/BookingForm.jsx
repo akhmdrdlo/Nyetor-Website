@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { AlertTriangle, Clock, MapPin, Briefcase, Calendar } from 'lucide-react';
+import { AlertTriangle, Clock, MapPin, Briefcase, Calendar, AlertCircle } from 'lucide-react';
 
 export default function BookingForm({ selectedBike, onCancel, onSubmit }) {
     const [formData, setFormData] = useState({
@@ -245,8 +245,17 @@ export default function BookingForm({ selectedBike, onCancel, onSubmit }) {
                         <div>
                             <label className="block text-gray-600 text-xs font-bold uppercase mb-1">Titik Antar (Awal)</label>
                             <input
-                                required type="text" className="input-field" placeholder="Alamat lengkap / Shareloc..."
-                                value={formData.titikAntar} onChange={e => setFormData({ ...formData, titikAntar: e.target.value })}
+                                required
+                                type="text"
+                                className={`input-field ${formData.duration === '3' ? 'bg-gray-200 cursor-not-allowed text-gray-400' : ''}`}
+                                placeholder={formData.duration === '3' ? 'Ambil Sendiri di Garasi (3 Jam)' : 'Alamat lengkap / Shareloc...'}
+                                value={formData.duration === '3' ? 'AMBIL SENDIRI DI GARASI' : formData.titikAntar}
+                                onChange={e => {
+                                    if (formData.duration !== '3') {
+                                        setFormData({ ...formData, titikAntar: e.target.value });
+                                    }
+                                }}
+                                disabled={formData.duration === '3'}
                             />
                         </div>
                         <div>
@@ -259,31 +268,33 @@ export default function BookingForm({ selectedBike, onCancel, onSubmit }) {
                     </div>
                 </div>
 
-                {/* EXTRAS & TOTAL */}
-                <div className="flex items-center justify-between bg-white p-2 rounded-xl">
-                    <label className="flex items-center gap-2 cursor-pointer">
-                        <input
-                            type="checkbox"
-                            checked={formData.helmet}
-                            onChange={e => setFormData({ ...formData, helmet: e.target.checked })}
-                            className="accent-[#004aad] w-5 h-5"
-                        />
-                        <span className="text-sm font-bold text-gray-700">Tambah Helm (+10k)</span>
-                    </label>
-
-                    <div className="text-right">
-                        <span className="block text-xs text-gray-400 font-bold uppercase">Total Biaya</span>
-                        <span className="text-3xl font-black text-[#004aad]">
-                            {(totalPrice / 1000)}<span className="text-sm">.000</span>
+                {/* INFO & TOTAL */}
+                <div className="bg-white p-6 rounded-xl text-center space-y-4">
+                    {/* Helmet Info */}
+                    <div className="bg-blue-50 border border-blue-100 p-3 rounded-lg text-xs text-blue-800 flex items-start gap-2 text-left">
+                        <AlertCircle size={16} className="shrink-0 mt-0.5" />
+                        <span>
+                            <strong>Butuh Helm?</strong> Silahkan pesan terpisah di kategori <strong>"Aksesoris"</strong>. <br />
+                            Harga sewa motor saat ini <strong>BELUM</strong> termasuk tambahan helm (kecuali bawaan standar).
                         </span>
+                    </div>
+
+                    <div className="flex flex-col items-center justify-center pt-2">
+                        <span className="block text-xs text-gray-400 font-bold uppercase tracking-widest mb-1">Total Biaya Sewa</span>
+                        <div className="flex items-start justify-center text-[#004aad]">
+                            <span className="text-xl font-bold mt-1">Rp</span>
+                            <span className="text-6xl font-black tracking-tighter">
+                                {(totalPrice / 1000)}<span className="text-2xl">.000</span>
+                            </span>
+                        </div>
                     </div>
                 </div>
 
-                {/* WAITING FOR 3 HOURS */}
+                {/* WAITING FOR 3 HOURS NOTIF */}
                 {formData.duration === '3' && (
-                    <div className="flex gap-3 bg-red-50 p-3 rounded-lg border border-red-100 text-red-700 text-xs items-center">
+                    <div className="flex gap-3 bg-red-50 p-3 rounded-lg border border-red-100 text-red-700 text-xs items-center shadow-sm">
                         <AlertTriangle size={16} className="shrink-0" />
-                        <span className="font-bold">Sewa 3 Jam TIDAK BISA DIANTAR (Ambil Sendiri).</span>
+                        <span className="font-bold">Sewa 3 Jam TIDAK BISA DIANTAR (Wajib Ambil Sendiri).</span>
                     </div>
                 )}
 
