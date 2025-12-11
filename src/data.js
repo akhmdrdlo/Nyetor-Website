@@ -32,8 +32,8 @@ export const catalogData = {
         },
         {
             id: "beat_street",
-            name: "HONDA BEAT STREET",
-            image: "/beat_street.png",
+            name: "HONDA BEAT STREET / BEAT 2018 *",
+            image: "/beat_streetnew.png",
             prices: { 3: 40000, 6: 45000, 12: 65000, 24: 105000 },
             features: []
         },
@@ -70,7 +70,7 @@ export const catalogData = {
         {
             id: "vario_led_old",
             name: "VARIO LED OLD",
-            image: "/vario_led150.png", // Using led150 as placeholder for old led or closest match
+            image: "/vario_ledOld.png", // Using led150 as placeholder for old led or closest match
             prices: { 3: 50000, 6: 55000, 12: 75000, 24: 125000 },
             features: []
         },
@@ -92,8 +92,8 @@ export const catalogData = {
     gold: [
         {
             id: "pcx_vario160",
-            name: "HONDA PCX / VARIO 160",
-            image: "/pcx.png",
+            name: "HONDA PCX / VARIO 160 *",
+            image: "/pcxnew.png",
             prices: { 3: 55000, 6: 60000, 12: 85000, 24: 140000 },
             features: []
         },
@@ -106,7 +106,7 @@ export const catalogData = {
         },
         {
             id: "nmax_keyless",
-            name: "YAMAHA NMAX KEYLESS 2021",
+            name: "YAMAHA NMAX KEYLESS",
             image: "/nmax_keyless.png",
             prices: { 3: 55000, 6: 65000, 12: 90000, 24: 150000 },
             features: []
