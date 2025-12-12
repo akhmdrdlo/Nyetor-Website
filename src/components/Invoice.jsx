@@ -3,7 +3,7 @@ import React, { forwardRef } from 'react';
 const Invoice = forwardRef(({ data }, ref) => {
     if (!data) return null;
 
-    const { name, phone, bike, duration, helmet, total, date, orderNo } = data;
+    const { name, phone, bike, duration, helmet, total, shippingCost, shippingZoneLabel, titikAntar, titikJemput, date, orderNo } = data;
 
     return (
         <div ref={ref} id="invoice-template" className="bg-white text-black p-10 w-[800px] mx-auto font-sans relative">
@@ -61,7 +61,8 @@ const Invoice = forwardRef(({ data }, ref) => {
                             <span className="text-sm text-[#004aad] font-semibold">{bike.name}</span>
                         </td>
                         <td className="p-4 text-right font-mono font-bold text-gray-700">
-                            IDR {(helmet ? total - 10000 : total).toLocaleString('id-ID')}
+                            {/* Calculate Base Price: Total - Helmet (10k) - Shipping */}
+                            IDR {(total - (helmet ? 10000 : 0) - (shippingCost || 0)).toLocaleString('id-ID')}
                         </td>
                     </tr>
                     {helmet && (
@@ -69,6 +70,22 @@ const Invoice = forwardRef(({ data }, ref) => {
                             <td className="p-4 font-bold text-gray-500">2</td>
                             <td className="p-4 font-bold text-gray-800">Tambahan Helm</td>
                             <td className="p-4 text-right font-mono font-bold text-gray-700">IDR 10.000</td>
+                        </tr>
+                    )}
+                    {shippingCost > 0 && (
+                        <tr className="border-b border-gray-100/50">
+                            <td className="p-4 font-bold text-gray-500 valign-top pt-5">{helmet ? 3 : 2}</td>
+                            <td className="p-4">
+                                <span className="font-bold text-gray-800 text-lg">Biaya Antar/Jemput (PP)</span>
+                                <div className="mt-2 text-xs text-gray-500 space-y-1">
+                                    <p><strong className="text-[#004aad]">Zone:</strong> {shippingZoneLabel}</p>
+                                    <p><strong className="text-[#004aad]">Antar:</strong> {titikAntar}</p>
+                                    <p><strong className="text-[#004aad]">Jemput:</strong> {titikJemput}</p>
+                                </div>
+                            </td>
+                            <td className="p-4 text-right font-mono font-bold text-gray-700 valign-top pt-5">
+                                IDR {shippingCost.toLocaleString('id-ID')}
+                            </td>
                         </tr>
                     )}
                 </tbody>

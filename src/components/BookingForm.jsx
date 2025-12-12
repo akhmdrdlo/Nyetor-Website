@@ -13,17 +13,49 @@ export default function BookingForm({ selectedBike, onCancel, onSubmit }) {
         startDate: '', // YYYY-MM-DD
         startTime: '', // HH:mm
         titikAntar: '',
-        titikJemput: ''
+        titikJemput: '',
+        deliveryMethod: 'pickup', // pickup | delivery
+        selectedZonePrice: 0
     });
 
     const [isSuccess, setIsSuccess] = useState(false);
     const [finalGoogleUrl, setFinalGoogleUrl] = useState('');
     const [endDateInfo, setEndDateInfo] = useState({ date: '', time: '' });
     const [totalPrice, setTotalPrice] = useState(0);
+    const [shakeDelivery, setShakeDelivery] = useState(false);
+
+    // Shipping Zones Data (Sorted by Price)
+    const SHIPPING_ZONES = [
+        { price: 5000, label: "Zone A (Rp 5.000)", detail: "Manisi & Cipadung" },
+        { price: 7000, label: "Zone B (Rp 7.000)", detail: "Panyilekan & Cimekar" },
+        { price: 10000, label: "Zone C (Rp 10.000)", detail: "Cilengkrang Bawah" },
+        { price: 11000, label: "Zone D (Rp 11.000)", detail: "Ujung Berung & Gedebage" },
+        { price: 13000, label: "Zone E (Rp 13.000)", detail: "Cinunuk & Cilengkrang Atas" },
+        { price: 15000, label: "Zone F (Rp 15.000)", detail: "Cileunyi & St. KCIC Tegalluar" },
+        { price: 20000, label: "Zone G (Rp 20.000)", detail: "Pasir Impun Bawah, Gedebage Dalem, Hotel Cordella" },
+        { price: 25000, label: "Zone H (Rp 25.000)", detail: "Metro, Apt. Panoramic, Pasir Impun Atas" },
+        { price: 30000, label: "Zone I (Rp 30.000)", detail: "St. Kircon, Jatinangor, Rancaekek, Trm. Cicaheum, Gasibu, Gdg Sate" },
+        { price: 35000, label: "Zone J (Rp 35.000)", detail: "Buah Batu" },
+        { price: 40000, label: "Zone K (Rp 40.000)", detail: "St. Bandung, Baltos, Dago Bawah, Dipati Ukur, Cihampelas, Dayeuh Kolot, Moh.Toha, Nagreg" },
+        { price: 50000, label: "Zone L (Rp 50.000)", detail: "St. Cimahi, Pasteur, Banjaran, Dago Atas, Trm. Leuwi Panjang, Pasir Koja" },
+        { price: 60000, label: "Zone M (Rp 60.000)", detail: "St. Padalarang, Soreang, Lembang" },
+    ];
+
+    // Helper to get selected zone detail
+    const selectedZoneDetail = SHIPPING_ZONES.find(z => z.price === formData.selectedZonePrice)?.detail;
 
     // Dynamic Pricing & End Date Calculation Logic
     useEffect(() => {
         if (!selectedBike) return;
+
+        // Force Pickup if 3 Hours
+        // We use a separate effect check or just enforce it here.
+        // Better to separate or ensure it doesn't cause infinite loops. 
+        // If duration is 3 and method is delivery, switch to pickup.
+        if (formData.duration === '3' && formData.deliveryMethod === 'delivery') {
+            setFormData(prev => ({ ...prev, deliveryMethod: 'pickup', selectedZonePrice: 0 }));
+            return; // Let strict mode or next render handle the pricing update to avoid race conditions
+        }
 
         // 1. Calculate Price
         let price = selectedBike.prices[formData.duration];
@@ -32,7 +64,16 @@ export default function BookingForm({ selectedBike, onCancel, onSubmit }) {
             const closest = durations.find(d => d >= Number(formData.duration)) || durations[durations.length - 1];
             price = selectedBike.prices[closest];
         }
+
+        // Add Helmet
         if (formData.helmet) price += 10000;
+
+        // Add Shipping (Ongkir)
+        // Ensure we only add shipping if NOT 3 hours (though the check above should handle it)
+        if (formData.deliveryMethod === 'delivery' && formData.duration !== '3') {
+            price += Number(formData.selectedZonePrice || 0);
+        }
+
         setTotalPrice(price);
 
         // 2. Calculate End Date/Time
@@ -58,18 +99,25 @@ export default function BookingForm({ selectedBike, onCancel, onSubmit }) {
             setEndDateInfo({ date: '-', time: '-' });
         }
 
-    }, [selectedBike, formData.duration, formData.helmet, formData.startDate, formData.startTime]);
+    }, [selectedBike, formData.duration, formData.helmet, formData.startDate, formData.startTime, formData.deliveryMethod, formData.selectedZonePrice]);
 
     const handleSubmit = (e) => {
         e.preventDefault();
 
         const finalTotal = totalPrice;
 
+        // Get label for selected zone
+        const currentZone = SHIPPING_ZONES.find(z => z.price === formData.selectedZonePrice);
+        const zoneLabel = currentZone ? `${currentZone.label}` : '';
+
         // 1. Trigger Invoice Download
         onSubmit({
             ...formData,
             bike: selectedBike,
             total: finalTotal,
+            shippingCost: formData.deliveryMethod === 'delivery' ? formData.selectedZonePrice : 0,
+            shippingZoneLabel: formData.deliveryMethod === 'delivery' ? zoneLabel : '',
+            deliveryDetail: formData.deliveryMethod === 'delivery' ? selectedZoneDetail : '',
             endDateInfo
         });
 
@@ -220,7 +268,15 @@ export default function BookingForm({ selectedBike, onCancel, onSubmit }) {
                             <select
                                 className="input-field"
                                 value={formData.duration}
-                                onChange={e => setFormData({ ...formData, duration: e.target.value })}
+                                onChange={e => {
+                                    const val = e.target.value;
+                                    const newUpdates = { duration: val };
+                                    if (val === '3') {
+                                        newUpdates.deliveryMethod = 'pickup';
+                                        newUpdates.selectedZonePrice = 0;
+                                    }
+                                    setFormData({ ...formData, ...newUpdates });
+                                }}
                             >
                                 {Object.keys(selectedBike.prices).map(h => (
                                     <option key={h} value={h}>{h} Jam</option>
@@ -236,33 +292,114 @@ export default function BookingForm({ selectedBike, onCancel, onSubmit }) {
                     </div>
                 </div>
 
-                {/* SECTION 3: LOCATION */}
+                {/* SECTION 3: LOCATION & DELIVERY */}
                 <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
                     <h3 className="text-sm font-bold text-[#004aad] mb-3 uppercase flex items-center gap-2">
-                        <MapPin size={16} /> Lokasi
+                        <MapPin size={16} /> Pengantaran & Lokasi
                     </h3>
+
+                    {/* Delivery Method Selection */}
+                    <div className="grid grid-cols-2 gap-3 mb-4">
+                        <label className={`cursor-pointer p-3 rounded-lg border flex flex-col items-center justify-center gap-1 transition-all ${formData.deliveryMethod === 'pickup' ? 'bg-blue-50 border-blue-500 text-blue-700' : 'bg-white border-gray-200 text-gray-500 hover:border-blue-300'}`}>
+                            <input
+                                type="radio"
+                                name="deliveryMethod"
+                                value="pickup"
+                                checked={formData.deliveryMethod === 'pickup'}
+                                onChange={() => setFormData({ ...formData, deliveryMethod: 'pickup', selectedZonePrice: 0 })}
+                                className="hidden"
+                            />
+                            <span className="font-bold text-sm">Ambil di Garasi</span>
+                            <span className="text-[10px] uppercase tracking-wider">Gratis</span>
+                        </label>
+
+                        <motion.label
+                            animate={shakeDelivery ? { x: [-10, 10, -10, 10, 0], borderColor: '#ef4444', backgroundColor: '#fef2f2' } : {}}
+                            transition={{ duration: 0.4 }}
+                            className={`cursor-pointer p-3 rounded-lg border flex flex-col items-center justify-center gap-1 transition-all ${formData.deliveryMethod === 'delivery' ? 'bg-blue-50 border-blue-500 text-blue-700' : 'bg-white border-gray-200 text-gray-500 hover:border-blue-300'}`}
+                            onClick={(e) => {
+                                if (formData.duration === '3') {
+                                    e.preventDefault();
+                                    setShakeDelivery(true);
+                                    setTimeout(() => setShakeDelivery(false), 400);
+                                }
+                            }}
+                        >
+                            <input
+                                type="radio"
+                                name="deliveryMethod"
+                                value="delivery"
+                                checked={formData.deliveryMethod === 'delivery'}
+                                onChange={() => setFormData({ ...formData, deliveryMethod: 'delivery' })}
+                                className="hidden"
+                            />
+                            <span className={`font-bold text-sm ${shakeDelivery ? 'text-red-500' : ''}`}>Diantar / Jemput</span>
+                            <span className={`text-[10px] uppercase tracking-wider ${shakeDelivery ? 'text-red-400' : ''}`}>+ Ongkir</span>
+                        </motion.label>
+                    </div>
+
                     <div className="grid grid-cols-1 gap-4">
+
+                        {/* Zone Selector (Only if Delivery) */}
+                        {formData.deliveryMethod === 'delivery' && (
+                            <div className="animate-fade-in-down">
+                                <label className="block text-gray-600 text-xs font-bold uppercase mb-1">
+                                    Pilih Area Pengantaran (Harga PP)
+                                </label>
+                                <select
+                                    required={formData.deliveryMethod === 'delivery'}
+                                    className="input-field border-blue-200 bg-blue-50/30"
+                                    onChange={(e) => {
+                                        const price = Number(e.target.value);
+                                        setFormData({ ...formData, selectedZonePrice: price });
+                                    }}
+                                    value={formData.selectedZonePrice || ''}
+                                >
+                                    <option value="" disabled>-- Pilih Area --</option>
+                                    {SHIPPING_ZONES.map((zone, idx) => (
+                                        <option key={idx} value={zone.price}>
+                                            {zone.label} - {zone.detail.substring(0, 90)}
+                                        </option>
+                                    ))}
+                                </select>
+                                <p className="text-[10px] text-gray-500 mt-1 italic">
+                                    *Harga sudah termasuk Pulang-Pergi (Antar & Jemput)
+                                </p>
+                            </div>
+                        )}
+
                         <div>
-                            <label className="block text-gray-600 text-xs font-bold uppercase mb-1">Titik Antar (Awal)</label>
+                            <label className="block text-gray-600 text-xs font-bold uppercase mb-1">Alamat Lengkap (Titik Antar)</label>
                             <input
                                 required
                                 type="text"
-                                className={`input-field ${formData.duration === '3' ? 'bg-gray-200 cursor-not-allowed text-gray-400' : ''}`}
-                                placeholder={formData.duration === '3' ? 'Ambil Sendiri di Garasi (3 Jam)' : 'Alamat lengkap / Shareloc...'}
-                                value={formData.duration === '3' ? 'AMBIL SENDIRI DI GARASI' : formData.titikAntar}
+                                className={`input-field ${formData.deliveryMethod === 'pickup' ? 'bg-gray-200 cursor-not-allowed text-gray-400' : ''}`}
+                                placeholder={formData.deliveryMethod === 'pickup' ? 'Ambil Sendiri di Garasi (Cipadung)' : 'Alamat lengkap / Shareloc...'}
+                                value={formData.deliveryMethod === 'pickup' ? 'AMBIL SENDIRI DI GARASI' : formData.titikAntar}
                                 onChange={e => {
-                                    if (formData.duration !== '3') {
+                                    if (formData.deliveryMethod !== 'pickup') {
                                         setFormData({ ...formData, titikAntar: e.target.value });
                                     }
                                 }}
-                                disabled={formData.duration === '3'}
+                                disabled={formData.deliveryMethod === 'pickup'}
                             />
                         </div>
+
                         <div>
-                            <label className="block text-gray-600 text-xs font-bold uppercase mb-1">Titik Jemput (Akhir)</label>
+                            <label className="block text-gray-600 text-xs font-bold uppercase mb-1">Titik Jemput (Pengembalian)</label>
                             <input
-                                required type="text" className="input-field" placeholder="Alamat lengkap..."
-                                value={formData.titikJemput} onChange={e => setFormData({ ...formData, titikJemput: e.target.value })}
+                                required type="text" className="input-field"
+                                placeholder={formData.deliveryMethod === 'pickup' ? 'Dikembalikan ke Garasi...' : 'Alamat lengkap...'}
+                                value={formData.deliveryMethod === 'pickup' ? 'KEMBALI KE GARASI' : formData.titikJemput}
+                                onChange={e => {
+                                    // Allow edit if they start with pickup but maybe return elsewhere? 
+                                    // Actually usually pickup means return to garage too for simple logic, but let's allow flexibility or lock it?
+                                    // For now let's lock it if pickup is selected to keep it simple as per "Ambil Sendiri" usually implies "Balikin Sendiri".
+                                    if (formData.deliveryMethod !== 'pickup') {
+                                        setFormData({ ...formData, titikJemput: e.target.value });
+                                    }
+                                }}
+                                disabled={formData.deliveryMethod === 'pickup'}
                             />
                         </div>
                     </div>
