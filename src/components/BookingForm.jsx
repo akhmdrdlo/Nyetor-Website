@@ -77,38 +77,34 @@ export default function BookingForm({ selectedBike, onCancel, onSubmit }) {
         // Force Pickup if 3 Hours Total
         if (currentTotalDuration === 3 && formData.deliveryMethod === 'delivery') {
             setFormData(prev => ({ ...prev, deliveryMethod: 'pickup', selectedZonePrice: 0 }));
-            // return; // Allow render to proceed, but warned user via UI
         }
 
-        // 2. Calculate Price (Sum of Chunks)
-        let price = 0;
+        // 2. Smart Pricing Logic (Recursive / Greedy)
+        const calculateSmartPrice = (hours, prices) => {
+            if (hours <= 0) return 0;
 
-        // Strategy: For each chunk, find its price. 
-        // If chunk is e.g. 24, look for price of 24 in `selectedBike.prices`.
-        // If not found (rare), fallback to logic? For now assume valid buttons based on bike options.
+            // Direct match check
+            if (prices[hours]) return prices[hours];
 
-        // Note: selectedBike.prices keys are strings "24", "12" etc.
-        const sortedPriceKeys = Object.keys(selectedBike.prices).map(Number).sort((a, b) => a - b);
+            // If no direct match, find largest duration fitting into 'hours'
+            const numericDurations = Object.keys(prices).map(Number).sort((a, b) => b - a); // Descending
+            const bestFit = numericDurations.find(d => d <= hours);
 
-        durationChunks.forEach(chunk => {
-            if (selectedBike.prices[chunk]) {
-                price += selectedBike.prices[chunk];
-            } else {
-                // Determine price if chunk doesn't exist explicitly (fallback logic)
-                // Try to find closest >= chunk
-                const closest = sortedPriceKeys.find(d => d >= chunk) || sortedPriceKeys[sortedPriceKeys.length - 1];
-                if (closest) {
-                    // Pro-rate or just use closest? 
-                    // For 72h (3 days), if we add 72 directly (not chunks), we might need logic.
-                    // But we are using chunks [24, 24, 24]. Each 24 has price.
-                    // If we encounter a weird chunk, fallback:
-                    price += selectedBike.prices[closest] || 0;
-                }
+            if (bestFit) {
+                return prices[bestFit] + calculateSmartPrice(hours - bestFit, prices);
             }
-        });
+
+            // Fallback (Should theoretically not happen if hours formed by defined chunks)
+            // But if there's a remainder smaller than smallest chunk:
+            // return proportional or just the smallest chunk price?
+            // Let's assume smallest chunk price to be safe/conservative for business
+            const minDuration = numericDurations[numericDurations.length - 1];
+            return prices[minDuration] || 0;
+        };
+
+        let price = calculateSmartPrice(currentTotalDuration, selectedBike.prices);
 
         // Add Shipping (Ongkir)
-        // Ensure we only add shipping if NOT 3 hours (though check above enforces pickup)
         if (formData.deliveryMethod === 'delivery' && currentTotalDuration > 3) {
             price += Number(formData.selectedZonePrice || 0);
         }
@@ -488,8 +484,8 @@ export default function BookingForm({ selectedBike, onCancel, onSubmit }) {
                     <div className="bg-blue-50 border border-blue-100 p-3 rounded-lg text-xs text-blue-800 flex items-start gap-2 text-left">
                         <AlertCircle size={16} className="shrink-0 mt-0.5" />
                         <span>
-                            <strong>Butuh Helm?</strong> Silahkan pesan terpisah di kategori <strong>"Aksesoris"</strong>. <br />
-                            Harga sewa motor saat ini <strong>BELUM</strong> termasuk tambahan helm (kecuali bawaan standar).
+                            <strong>Info Helm:</strong> Unit sudah termasuk <strong>2 Helm Standar</strong>. <br />
+                            Butuh helm tambahan? Silahkan pesan terpisah di kategori <strong>"Aksesoris"</strong>.
                         </span>
                     </div>
 

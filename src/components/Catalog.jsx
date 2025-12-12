@@ -82,7 +82,7 @@ export default function Catalog({ onSelectBike }) {
                                     onClick={() => setPriceMode('special')}
                                     className={`relative z-10 px-6 py-2 rounded-full font-bold text-sm md:text-base transition-colors duration-300 w-32 ${isSpecial ? 'text-white' : 'text-gray-500 hover:text-gray-900'}`}
                                 >
-                                    ✨ SPECIAL
+                                    🎄PERIODE NATARU
                                 </button>
                             </div>
                         </div>

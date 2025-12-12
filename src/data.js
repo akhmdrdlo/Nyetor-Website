@@ -70,7 +70,7 @@ export const catalogData = {
         {
             id: "vario_led_old",
             name: "VARIO LED OLD",
-            image: "/vario_ledOld.png", // Using led150 as placeholder for old led or closest match
+            image: "/vario_ledOld.png",
             prices: { 3: 50000, 6: 55000, 12: 75000, 24: 125000 },
             features: []
         },
@@ -163,13 +163,6 @@ export const catalogData = {
             name: "HONDA BEAT POP",
             image: "/beat_pop.png",
             prices: { 6: 50000, 12: 70000, 24: 105000 },
-            features: []
-        },
-        {
-            id: "xride_xmas",
-            name: "YAMAHA XRIDE",
-            image: "/mio.png", // Placeholder using Mio as Xride similar/same brand if img missing
-            prices: { 6: 55000, 12: 70000, 24: 110000 },
             features: []
         },
         {
