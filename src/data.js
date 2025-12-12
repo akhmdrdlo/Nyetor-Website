@@ -141,5 +141,113 @@ export const catalogData = {
             prices: { 12: 15000, 24: 20000 },
             features: ["Kapasitas Besar"]
         }
+    ],
+    // CHRISTMAS SPECIAL CATALOG (Dec 23 - Jan 3)
+    christmas: [
+        {
+            id: "mio_m3_xmas",
+            name: "YAMAHA MIO M3",
+            image: "/mio.png",
+            prices: { 12: 60000, 24: 80000 },
+            features: []
+        },
+        {
+            id: "vario_kzr_xmas",
+            name: "HONDA VARIO KZR",
+            image: "/vario_kzr.png",
+            prices: { 6: 50000, 12: 65000, 24: 100000 },
+            features: []
+        },
+        {
+            id: "beat_pop_xmas",
+            name: "HONDA BEAT POP",
+            image: "/beat_pop.png",
+            prices: { 6: 50000, 12: 70000, 24: 105000 },
+            features: []
+        },
+        {
+            id: "xride_xmas",
+            name: "YAMAHA XRIDE",
+            image: "/mio.png", // Placeholder using Mio as Xride similar/same brand if img missing
+            prices: { 6: 55000, 12: 70000, 24: 110000 },
+            features: []
+        },
+        {
+            id: "gear_matic_xmas",
+            name: "YAMAHA GEAR MATIC",
+            image: "/gear_matic.png",
+            prices: { 6: 60000, 12: 75000, 24: 115000 },
+            features: []
+        },
+        {
+            id: "genio_xmas",
+            name: "HONDA GENIO",
+            image: "/genio2022.png",
+            prices: { 6: 65000, 12: 75000, 24: 120000 },
+            features: []
+        },
+        {
+            id: "beat_deluxe_xmas",
+            name: "HONDA BEAT DELUXE",
+            image: "/beat_deluxe.png",
+            prices: { 6: 65000, 12: 80000, 24: 125000 },
+            features: []
+        },
+        {
+            id: "scoopy_2023_xmas",
+            name: "HONDA SCOOPY 2023",
+            image: "/scoopy2023.png",
+            prices: { 6: 70000, 12: 85000, 24: 130000 },
+            features: []
+        },
+        {
+            id: "scoopy_keyless_xmas",
+            name: "ALLNEW SCOOPY KEYLESS 2025",
+            image: "/scoopy_keyless.png",
+            prices: { 6: 70000, 12: 85000, 24: 135000 },
+            features: []
+        },
+        {
+            id: "vario_led_old_xmas",
+            name: "VARIO LED OLD",
+            image: "/vario_ledOld.png",
+            prices: { 6: 70000, 12: 90000, 24: 140000 },
+            features: []
+        },
+        {
+            id: "vario_led_new_xmas",
+            name: "VARIO LED NEW",
+            image: "/vario_led_new.png",
+            prices: { 6: 70000, 12: 90000, 24: 145000 },
+            features: []
+        },
+        {
+            id: "vario_150_keyless_xmas",
+            name: "VARIO 150CC KEYLESS",
+            image: "/vario_led150.png",
+            prices: { 6: 75000, 12: 95000, 24: 150000 },
+            features: []
+        },
+        {
+            id: "pcx_xmas",
+            name: "HONDA PCX",
+            image: "/pcx.png",
+            prices: { 6: 75000, 12: 95000, 24: 155000 },
+            features: []
+        },
+        {
+            id: "nmax_old_xmas",
+            name: "YAMAHA NMAX OLD 2019",
+            image: "/nmax.png",
+            prices: { 6: 85000, 12: 100000, 24: 155000 },
+            features: []
+        },
+        {
+            id: "nmax_keyless_xmas",
+            name: "YAMAHA NMAX KEYLESS 2021",
+            image: "/nmax_keyless.png",
+            prices: { 6: 85000, 12: 100000, 24: 155000 },
+            features: []
+        }
     ]
 };

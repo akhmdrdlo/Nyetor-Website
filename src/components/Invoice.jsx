@@ -59,6 +59,10 @@ const Invoice = forwardRef(({ data }, ref) => {
                             <span className="font-bold text-lg text-gray-800">Rental {duration} Jam</span>
                             <br />
                             <span className="text-sm text-[#004aad] font-semibold">{bike.name}</span>
+                            <div className="mt-2 text-[10px] text-gray-500 font-mono">
+                                <div>Mulai: {data.startDate} {data.startTime}</div>
+                                <div>Selesai: {data.endDateInfo?.date} {data.endDateInfo?.time}</div>
+                            </div>
                         </td>
                         <td className="p-4 text-right font-mono font-bold text-gray-700">
                             {/* Calculate Base Price: Total - Helmet (10k) - Shipping */}

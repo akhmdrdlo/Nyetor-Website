@@ -1,25 +1,32 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { AlertTriangle, Clock, MapPin, Briefcase, Calendar, AlertCircle } from 'lucide-react';
+import { AlertTriangle, Clock, MapPin, Briefcase, Calendar, AlertCircle, Plus, RefreshCw } from 'lucide-react';
 
 export default function BookingForm({ selectedBike, onCancel, onSubmit }) {
     const [formData, setFormData] = useState({
         name: '',
         phone: '',
-        duration: '24',
-        helmet: false,
         pekerjaan: '',
         instansi: '',
         startDate: '', // YYYY-MM-DD
         startTime: '', // HH:mm
         titikAntar: '',
+        titikAntarDetail: '', // Provide detailed desc if needed
         titikJemput: '',
         deliveryMethod: 'pickup', // pickup | delivery
         selectedZonePrice: 0
     });
 
+    // Flexible Duration Logic
+    const sortedDurations = selectedBike && selectedBike.prices
+        ? Object.keys(selectedBike.prices).map(Number).sort((a, b) => a - b)
+        : [];
+    const minDuration = sortedDurations.length > 0 ? sortedDurations[0] : 24; // Default to lowest available or 24 if empty
+
+    const [durationChunks, setDurationChunks] = useState([minDuration]);
+    const [totalDuration, setTotalDuration] = useState(minDuration);
+
     const [isSuccess, setIsSuccess] = useState(false);
-    const [finalGoogleUrl, setFinalGoogleUrl] = useState('');
     const [endDateInfo, setEndDateInfo] = useState({ date: '', time: '' });
     const [totalPrice, setTotalPrice] = useState(0);
     const [shakeDelivery, setShakeDelivery] = useState(false);
@@ -44,45 +51,76 @@ export default function BookingForm({ selectedBike, onCancel, onSubmit }) {
     // Helper to get selected zone detail
     const selectedZoneDetail = SHIPPING_ZONES.find(z => z.price === formData.selectedZonePrice)?.detail;
 
+    // Helper: Add Duration Chunk
+    const addDuration = (hours) => {
+        setDurationChunks(prev => [...prev, hours]);
+    };
+
+    // Helper: Reset Duration
+    const resetDuration = () => {
+        setDurationChunks([minDuration]); // Reset to minimum duration
+    };
+
+    // Helper: Set specific duration (clears sum) - for Shortcuts
+    const setSpecificDuration = (chunks) => {
+        setDurationChunks(chunks);
+    };
+
     // Dynamic Pricing & End Date Calculation Logic
     useEffect(() => {
         if (!selectedBike) return;
 
-        // Force Pickup if 3 Hours
-        // We use a separate effect check or just enforce it here.
-        // Better to separate or ensure it doesn't cause infinite loops. 
-        // If duration is 3 and method is delivery, switch to pickup.
-        if (formData.duration === '3' && formData.deliveryMethod === 'delivery') {
+        // 1. Calculate Total Duration
+        const currentTotalDuration = durationChunks.reduce((acc, curr) => acc + curr, 0);
+        setTotalDuration(currentTotalDuration);
+
+        // Force Pickup if 3 Hours Total
+        if (currentTotalDuration === 3 && formData.deliveryMethod === 'delivery') {
             setFormData(prev => ({ ...prev, deliveryMethod: 'pickup', selectedZonePrice: 0 }));
-            return; // Let strict mode or next render handle the pricing update to avoid race conditions
+            // return; // Allow render to proceed, but warned user via UI
         }
 
-        // 1. Calculate Price
-        let price = selectedBike.prices[formData.duration];
-        if (!price) {
-            const durations = Object.keys(selectedBike.prices).map(Number).sort((a, b) => a - b);
-            const closest = durations.find(d => d >= Number(formData.duration)) || durations[durations.length - 1];
-            price = selectedBike.prices[closest];
-        }
+        // 2. Calculate Price (Sum of Chunks)
+        let price = 0;
 
-        // Add Helmet
-        if (formData.helmet) price += 10000;
+        // Strategy: For each chunk, find its price. 
+        // If chunk is e.g. 24, look for price of 24 in `selectedBike.prices`.
+        // If not found (rare), fallback to logic? For now assume valid buttons based on bike options.
+
+        // Note: selectedBike.prices keys are strings "24", "12" etc.
+        const sortedPriceKeys = Object.keys(selectedBike.prices).map(Number).sort((a, b) => a - b);
+
+        durationChunks.forEach(chunk => {
+            if (selectedBike.prices[chunk]) {
+                price += selectedBike.prices[chunk];
+            } else {
+                // Determine price if chunk doesn't exist explicitly (fallback logic)
+                // Try to find closest >= chunk
+                const closest = sortedPriceKeys.find(d => d >= chunk) || sortedPriceKeys[sortedPriceKeys.length - 1];
+                if (closest) {
+                    // Pro-rate or just use closest? 
+                    // For 72h (3 days), if we add 72 directly (not chunks), we might need logic.
+                    // But we are using chunks [24, 24, 24]. Each 24 has price.
+                    // If we encounter a weird chunk, fallback:
+                    price += selectedBike.prices[closest] || 0;
+                }
+            }
+        });
 
         // Add Shipping (Ongkir)
-        // Ensure we only add shipping if NOT 3 hours (though the check above should handle it)
-        if (formData.deliveryMethod === 'delivery' && formData.duration !== '3') {
+        // Ensure we only add shipping if NOT 3 hours (though check above enforces pickup)
+        if (formData.deliveryMethod === 'delivery' && currentTotalDuration > 3) {
             price += Number(formData.selectedZonePrice || 0);
         }
 
         setTotalPrice(price);
 
-        // 2. Calculate End Date/Time
+        // 3. Calculate End Date/Time
         if (formData.startDate && formData.startTime) {
             const start = new Date(`${formData.startDate}T${formData.startTime}`);
-            const durationHours = parseInt(formData.duration);
 
-            if (!isNaN(start.getTime()) && !isNaN(durationHours)) {
-                const end = new Date(start.getTime() + durationHours * 60 * 60 * 1000);
+            if (!isNaN(start.getTime())) {
+                const end = new Date(start.getTime() + currentTotalDuration * 60 * 60 * 1000);
 
                 // Format Date: YYYY-MM-DD
                 const yyyy = end.getFullYear();
@@ -99,7 +137,7 @@ export default function BookingForm({ selectedBike, onCancel, onSubmit }) {
             setEndDateInfo({ date: '-', time: '-' });
         }
 
-    }, [selectedBike, formData.duration, formData.helmet, formData.startDate, formData.startTime, formData.deliveryMethod, formData.selectedZonePrice]);
+    }, [selectedBike, durationChunks, formData.startDate, formData.startTime, formData.deliveryMethod, formData.selectedZonePrice]);
 
     const handleSubmit = (e) => {
         e.preventDefault();
@@ -115,6 +153,7 @@ export default function BookingForm({ selectedBike, onCancel, onSubmit }) {
             ...formData,
             bike: selectedBike,
             total: finalTotal,
+            duration: totalDuration.toString(), // Pass total duration
             shippingCost: formData.deliveryMethod === 'delivery' ? formData.selectedZonePrice : 0,
             shippingZoneLabel: formData.deliveryMethod === 'delivery' ? zoneLabel : '',
             deliveryDetail: formData.deliveryMethod === 'delivery' ? selectedZoneDetail : '',
@@ -129,7 +168,7 @@ export default function BookingForm({ selectedBike, onCancel, onSubmit }) {
         params.append('entry.1136619666', formData.name);
         params.append('entry.186146540', formData.phone);
         params.append('entry.50981428', selectedBike.name);
-        params.append('entry.94114208', formData.duration + " Jam");
+        params.append('entry.94114208', totalDuration + " Jam");
 
         // --- JOB & INST ---
         params.append('entry.1453468515', formData.pekerjaan);
@@ -185,6 +224,10 @@ export default function BookingForm({ selectedBike, onCancel, onSubmit }) {
     };
 
     if (!selectedBike) return null;
+
+    // Available duration buttons derived from bike prices
+    // If bike has 3h, show +3h button. etc.
+    const availableDurations = Object.keys(selectedBike.prices).map(Number).sort((a, b) => a - b);
 
     return (
         <motion.div
@@ -248,7 +291,7 @@ export default function BookingForm({ selectedBike, onCancel, onSubmit }) {
                     <h3 className="text-sm font-bold text-[#004aad] mb-3 uppercase flex items-center gap-2">
                         <Calendar size={16} /> Detail Sewa
                     </h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                         <div>
                             <label className="block text-gray-600 text-xs font-bold uppercase mb-1">Tanggal Mulai</label>
                             <input
@@ -263,31 +306,65 @@ export default function BookingForm({ selectedBike, onCancel, onSubmit }) {
                                 value={formData.startTime} onChange={e => setFormData({ ...formData, startTime: e.target.value })}
                             />
                         </div>
-                        <div>
-                            <label className="block text-gray-600 text-xs font-bold uppercase mb-1">Durasi</label>
-                            <select
-                                className="input-field"
-                                value={formData.duration}
-                                onChange={e => {
-                                    const val = e.target.value;
-                                    const newUpdates = { duration: val };
-                                    if (val === '3') {
-                                        newUpdates.deliveryMethod = 'pickup';
-                                        newUpdates.selectedZonePrice = 0;
-                                    }
-                                    setFormData({ ...formData, ...newUpdates });
-                                }}
-                            >
-                                {Object.keys(selectedBike.prices).map(h => (
-                                    <option key={h} value={h}>{h} Jam</option>
-                                ))}
-                            </select>
-                        </div>
-                        <div>
-                            <label className="block text-gray-400 text-xs font-bold uppercase mb-1">Selesai (Otomatis)</label>
-                            <div className="bg-gray-200 text-gray-600 px-3 py-3 rounded-lg font-mono text-sm border border-gray-300">
-                                {endDateInfo.date} • {endDateInfo.time}
+                    </div>
+
+                    {/* Flexible Duration Builder */}
+                    <div className="mb-4">
+                        <label className="block text-gray-600 text-xs font-bold uppercase mb-1">Durasi Sewa (Tekan untuk Menambah)</label>
+
+                        {/* Status Bar */}
+                        <div className="flex items-center justify-between bg-white p-3 rounded-lg border border-blue-200 mb-3">
+                            <div className="flex items-center gap-2">
+                                <Clock className="text-blue-500" size={18} />
+                                <div>
+                                    <div className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Total Durasi</div>
+                                    <div className="text-lg font-black text-gray-800">{totalDuration} Jam</div>
+                                </div>
                             </div>
+                            <button
+                                type="button"
+                                onClick={resetDuration}
+                                className="text-gray-400 hover:text-red-500 transition-colors p-2 rounded-full hover:bg-gray-100"
+                                title="Reset Durasi"
+                            >
+                                <RefreshCw size={18} />
+                            </button>
+                        </div>
+
+                        {/* Buttons Grid */}
+                        <div className="grid grid-cols-3 md:grid-cols-4 gap-2 mb-2">
+                            {/* Short Adders defined by bike (e.g. +3, +6, +12, +24) */}
+                            {availableDurations.map(h => (
+                                <button
+                                    key={h}
+                                    type="button"
+                                    onClick={() => addDuration(h)}
+                                    className="flex items-center justify-center gap-1 bg-white border border-gray-200 hover:border-blue-400 hover:bg-blue-50 text-gray-600 hover:text-blue-600 py-2 rounded-lg text-sm font-bold transition-all shadow-sm active:scale-95"
+                                >
+                                    <Plus size={14} /> {h}h
+                                </button>
+                            ))}
+                        </div>
+
+                        {/* Shortcuts */}
+                        <div className="flex gap-2 overflow-x-auto pb-1">
+                            <button type="button" onClick={() => setSpecificDuration(Array(7).fill(24))} className="whitespace-nowrap px-3 py-1 bg-gray-100 hover:bg-gray-200 rounded-full text-xs font-bold text-gray-500 transition-colors">
+                                1 Minggu
+                            </button>
+                            <button type="button" onClick={() => setSpecificDuration(Array(14).fill(24))} className="whitespace-nowrap px-3 py-1 bg-gray-100 hover:bg-gray-200 rounded-full text-xs font-bold text-gray-500 transition-colors">
+                                2 Minggu
+                            </button>
+                            <button type="button" onClick={() => setSpecificDuration(Array(30).fill(24))} className="whitespace-nowrap px-3 py-1 bg-gray-100 hover:bg-gray-200 rounded-full text-xs font-bold text-gray-500 transition-colors">
+                                1 Bulan
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* End Date Display */}
+                    <div>
+                        <label className="block text-gray-400 text-xs font-bold uppercase mb-1">Selesai (Otomatis)</label>
+                        <div className="bg-gray-200 text-gray-600 px-3 py-3 rounded-lg font-mono text-sm border border-gray-300">
+                            {endDateInfo.date} • {endDateInfo.time}
                         </div>
                     </div>
                 </div>
