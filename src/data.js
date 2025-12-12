@@ -142,13 +142,20 @@ export const catalogData = {
             features: ["Kapasitas Besar"]
         }
     ],
-    // CHRISTMAS SPECIAL CATALOG (Dec 23 - Jan 3)
+    // CHRISTMAS SPECIAL CATALOG (Dec 23 - Jan 4)
     christmas: [
         {
             id: "mio_m3_xmas",
             name: "YAMAHA MIO M3",
             image: "/mio.png",
             prices: { 12: 60000, 24: 80000 },
+            features: []
+        },
+        {
+            id: "beat_street_xmas",
+            name: "HONDA BEAT STREET / BEAT 2018",
+            image: "/beat_streetnew.png",
+            prices: { 6: 55000, 12: 70000, 24: 110000 },
             features: []
         },
         {

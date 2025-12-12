@@ -107,7 +107,7 @@ export default function Catalog({ onSelectBike }) {
                             >
                                 <h3 className="font-black text-lg mb-1">🎄 PENYESUAIAN TARIF NATAL DAN TAHUN BARU 🎄</h3>
                                 <p className="text-sm font-medium">
-                                    Masa Berlaku: <strong>23 Desember 2025 - 3 Januari 2026</strong>* <br />
+                                    Masa Berlaku: <strong>23 Desember 2025 - 4 Januari 2026</strong>* <br />
                                     <span className="text-xs opacity-75">*Dapat berubah sewaktu-waktu.</span>
                                 </p>
                             </motion.div>

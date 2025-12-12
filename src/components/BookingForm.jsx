@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { AlertTriangle, Clock, MapPin, Briefcase, Calendar, AlertCircle, Plus, RefreshCw } from 'lucide-react';
+import { AlertTriangle, Clock, MapPin, Briefcase, Calendar, AlertCircle, Plus, RefreshCw, Check } from 'lucide-react';
 
 export default function BookingForm({ selectedBike, onCancel, onSubmit }) {
     const [formData, setFormData] = useState({
@@ -144,17 +144,6 @@ export default function BookingForm({ selectedBike, onCancel, onSubmit }) {
         const currentZone = SHIPPING_ZONES.find(z => z.price === formData.selectedZonePrice);
         const zoneLabel = currentZone ? `${currentZone.label}` : '';
 
-        // 1. Trigger Invoice Download
-        onSubmit({
-            ...formData,
-            bike: selectedBike,
-            total: finalTotal,
-            duration: totalDuration.toString(), // Pass total duration
-            shippingCost: formData.deliveryMethod === 'delivery' ? formData.selectedZonePrice : 0,
-            shippingZoneLabel: formData.deliveryMethod === 'delivery' ? zoneLabel : '',
-            deliveryDetail: formData.deliveryMethod === 'delivery' ? selectedZoneDetail : '',
-            endDateInfo
-        });
 
         // 2. Prepare Google Form URL
         const formBaseUrl = "https://docs.google.com/forms/d/e/1FAIpQLSfmIf2V8F693IHThJsJLvkV9pZH8HGYEIjxHLPXn58aWgSIZQ/viewform";
@@ -206,17 +195,21 @@ export default function BookingForm({ selectedBike, onCancel, onSubmit }) {
 
         const finalUrl = `${formBaseUrl}?${params.toString()}`;
 
-        // --- LOG & ALERT (User Experience) ---
-        console.log("✅ Data sent to Google Form Params.");
-        console.log("⚠ User needs to manually fill: [Upload Jaminan] & [Kontak Darurat]");
+        // 1. Trigger Invoice Download & Pass URL to Parent
+        onSubmit({
+            ...formData,
+            bike: selectedBike,
+            total: finalTotal,
+            duration: totalDuration.toString(),
+            shippingCost: formData.deliveryMethod === 'delivery' ? formData.selectedZonePrice : 0,
+            shippingZoneLabel: formData.deliveryMethod === 'delivery' ? zoneLabel : '',
+            deliveryDetail: formData.deliveryMethod === 'delivery' ? selectedZoneDetail : '',
+            endDateInfo,
+            googleFormUrl: finalUrl // Pass URL for manual button in Success screen
+        });
 
-        const warmMessage = `Halo Kak ${formData.name || 'Ganteng/Cantik'}! ✨\n\nTerima kasih sudah booking unit di Nyetor.id! Invoice kakak sedang didownload otomatis.\n\nLangkah Terakhir:\nKami akan mengarahkan kakak ke Google Form. Mohon lengkapi bagian ini ya:\n1. 📸 Upload Foto Jaminan (KTP/KTM)\n2. 📞 Isi 2 Kontak Darurat\n\nJika semua sudah, langsung klik SUBMIT ya. Hati-hati di jalan! 🛵💨`;
-
-        // Small delay to ensure invoice download triggers first, then show alert
-        setTimeout(() => {
-            alert(warmMessage);
-            window.open(finalUrl, '_blank');
-        }, 1000);
+        // Log for debug
+        console.log("✅ Data prepared for Google Form Button.");
     };
 
     if (!selectedBike) return null;
@@ -306,7 +299,7 @@ export default function BookingForm({ selectedBike, onCancel, onSubmit }) {
 
                     {/* Flexible Duration Builder */}
                     <div className="mb-4">
-                        <label className="block text-gray-600 text-xs font-bold uppercase mb-1">Durasi Sewa (Tekan untuk Menambah)</label>
+                        <label className="block text-gray-600 text-xs font-bold uppercase mb-1">Durasi Sewa</label>
 
                         {/* Status Bar */}
                         <div className="flex items-center justify-between bg-white p-3 rounded-lg border border-blue-200 mb-3">
@@ -327,22 +320,43 @@ export default function BookingForm({ selectedBike, onCancel, onSubmit }) {
                             </button>
                         </div>
 
-                        {/* Buttons Grid */}
-                        <div className="grid grid-cols-3 md:grid-cols-4 gap-2 mb-2">
-                            {/* Short Adders defined by bike (e.g. +3, +6, +12, +24) */}
-                            {availableDurations.map(h => (
+                        {/* 1. MAIN PACKAGES (SET DURATION) */}
+                        <label className="block text-gray-400 text-[10px] font-bold uppercase mb-1">Pilih Paket Utama</label>
+                        <div className="grid grid-cols-4 gap-2 mb-3">
+                            {availableDurations.map(h => {
+                                const isActive = totalDuration === h;
+                                return (
+                                    <button
+                                        key={h}
+                                        type="button"
+                                        onClick={() => setSpecificDuration([h])}
+                                        className={`flex items-center justify-center gap-1 border py-2 rounded-lg text-xs font-bold transition-all shadow-sm active:scale-95 ${isActive
+                                            ? 'bg-blue-600 border-blue-600 text-white shadow-md ring-2 ring-offset-1 ring-blue-400'
+                                            : 'bg-white border-gray-200 text-gray-600 hover:border-blue-400 hover:bg-blue-50 hover:text-blue-600'
+                                            }`}
+                                    >
+                                        {isActive && <Check size={12} />} {h}h
+                                    </button>
+                                );
+                            })}
+                        </div>
+
+                        {/* 2. ADD EXTRA (ADD DURATION) */}
+                        <label className="block text-gray-400 text-[10px] font-bold uppercase mb-1">Tambah Ekstra Jam</label>
+                        <div className="grid grid-cols-4 gap-2 mb-3">
+                            {[3, 6, 12, 24].map(h => (
                                 <button
-                                    key={h}
+                                    key={`add-${h}`}
                                     type="button"
                                     onClick={() => addDuration(h)}
-                                    className="flex items-center justify-center gap-1 bg-white border border-gray-200 hover:border-blue-400 hover:bg-blue-50 text-gray-600 hover:text-blue-600 py-2 rounded-lg text-sm font-bold transition-all shadow-sm active:scale-95"
+                                    className="flex items-center justify-center gap-1 bg-gray-50 border border-transparent text-gray-500 hover:bg-white hover:border-blue-300 hover:text-blue-600 py-1.5 rounded-lg text-xs font-bold transition-all active:scale-95"
                                 >
-                                    <Plus size={14} /> {h}h
+                                    <Plus size={10} /> {h}h
                                 </button>
                             ))}
                         </div>
 
-                        {/* Shortcuts */}
+                        {/* 3. LONG TERM (SHORTCUTS) */}
                         <div className="flex gap-2 overflow-x-auto pb-1">
                             <button type="button" onClick={() => setSpecificDuration(Array(7).fill(24))} className="whitespace-nowrap px-3 py-1 bg-gray-100 hover:bg-gray-200 rounded-full text-xs font-bold text-gray-500 transition-colors">
                                 1 Minggu
@@ -498,6 +512,14 @@ export default function BookingForm({ selectedBike, onCancel, onSubmit }) {
                             </span>
                         </div>
                     </div>
+                </div>
+
+                {/* Availability Disclaimer */}
+                <div className="bg-yellow-50 p-3 rounded-lg border border-yellow-100 text-[10px] text-yellow-800 flex items-start gap-2 italic">
+                    <AlertTriangle size={14} className="shrink-0 mt-0.5" />
+                    <span>
+                        <strong>Note:</strong> Unit yang dipilih jika mendadak tidak ready karena banyak hal (servis/laka) akan diinformasikan paling lambat H-1 dengan ditawarkan unit yang selevel dengan pilihan unit pertama.
+                    </span>
                 </div>
 
                 {/* WAITING FOR 3 HOURS NOTIF */}

@@ -92,19 +92,29 @@ function App() {
         <div className="fixed inset-0 z-50 bg-[#0a0a0a] flex flex-col items-center justify-center p-8 text-center">
           <h1 className="text-4xl font-bold text-[#00f3ff] mb-4">Booking Berhasil!</h1>
           <p className="text-gray-400 mb-8 max-w-md">
-            Invoice anda telah didownload otomatis. Silahkan kirim invoice tersebut ke Admin via WhatsApp untuk konfirmasi pembayaran.
+            Invoice anda telah didownload otomatis. <br />
+            Silahkan klik tombol di bawah untuk melengkapi data jaminan dan kontak darurat.
           </p>
+
+          <a
+            href={invoiceData?.googleFormUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="btn py-4 px-8 text-lg mb-4 w-full max-w-xs animate-pulse"
+          >
+            LENGKAPI DATA (UPLOAD KTP)
+          </a>
 
           <a
             href={`https://wa.me/6287818747396?text=Halo%20Admin,%20saya%20sudah%20download%20invoice%20atas%20nama%20${invoiceData?.name}.%20Mohon%20dibantu.`}
             target="_blank"
-            className="btn py-4 px-8 text-lg mb-4"
+            className="text-gray-500 hover:text-white mb-8 text-sm underline"
             rel="noreferrer"
           >
-            Kirim Pembayaran via WhatsApp
+            Konfirmasi Manual via WhatsApp
           </a>
 
-          <button onClick={() => window.location.reload()} className="text-gray-500 hover:text-white underline">
+          <button onClick={() => window.location.reload()} className="text-gray-600 hover:text-gray-400 text-xs">
             Kembali ke Beranda
           </button>
         </div>
