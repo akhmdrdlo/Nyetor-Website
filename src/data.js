@@ -33,7 +33,7 @@ export const catalogData = {
         {
             id: "beat_2018",
             name: "HONDA BEAT 2018",
-            image: "/beat_2018.png",
+            image: "/beat2018.png",
             prices: { 3: 40000, 6: 45000, 12: 65000, 24: 105000 },
             features: []
         },
