@@ -31,10 +31,17 @@ export const catalogData = {
             features: ["Include Sarung Tangan"]
         },
         {
-            id: "beat_street",
-            name: "HONDA BEAT STREET / BEAT 2018 *",
-            image: "/beat_streetnew.png",
+            id: "beat_2018",
+            name: "HONDA BEAT 2018",
+            image: "/beat_2018.png",
             prices: { 3: 40000, 6: 45000, 12: 65000, 24: 105000 },
+            features: []
+        },
+        {
+            id: "beat_street",
+            name: "HONDA BEAT STREET",
+            image: "/beat_streetnew.png",
+            prices: { 3: 40000, 6: 45000, 12: 65000, 24: 110000 },
             features: []
         },
         {
@@ -92,7 +99,7 @@ export const catalogData = {
     gold: [
         {
             id: "pcx_vario160",
-            name: "HONDA PCX / VARIO 160 *",
+            name: "HONDA PCX / VARIO 160",
             image: "/pcxnew.png",
             prices: { 3: 55000, 6: 60000, 12: 85000, 24: 140000 },
             features: []

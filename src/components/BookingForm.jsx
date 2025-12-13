@@ -234,6 +234,13 @@ export default function BookingForm({ selectedBike, onCancel, onSubmit }) {
             <h2 className="text-2xl font-black mb-1 text-[#004aad] text-center">FORMULIR BOOKING</h2>
             <p className="text-gray-500 text-sm mb-6 text-center">
                 Unit: <span className="font-bold text-black">{selectedBike.name}</span>
+                {/* Availability Disclaimer */}
+                <div className="bg-yellow-50 p-3 rounded-lg border border-yellow-100 text-[10px] text-yellow-800 flex items-start gap-2 italic">
+                    <AlertTriangle size={14} className="shrink-0 mt-0.5" />
+                    <span>
+                        <strong>Note:</strong> Unit yang dipilih jika mendadak tidak ready karena banyak hal (servis/laka) akan diinformasikan paling lambat H-1 dengan ditawarkan unit yang selevel dengan pilihan unit pertama.
+                    </span>
+                </div>
             </p>
 
             <form onSubmit={handleSubmit} className="space-y-6">
@@ -384,7 +391,13 @@ export default function BookingForm({ selectedBike, onCancel, onSubmit }) {
                     <h3 className="text-sm font-bold text-[#004aad] mb-3 uppercase flex items-center gap-2">
                         <MapPin size={16} /> Pengantaran & Lokasi
                     </h3>
-
+                    {/* WAITING FOR 3 HOURS NOTIF */}
+                    {totalDuration === 3 && (
+                        <div className="flex gap-3 bg-red-50 p-3 mb-4 rounded-lg border border-red-100 text-red-700 text-xs items-center shadow-sm">
+                            <AlertTriangle size={16} className="shrink-0" />
+                            <span className="font-bold">Sewa 3 Jam TIDAK BISA DIANTAR (Wajib Ambil Sendiri).</span>
+                        </div>
+                    )}
                     {/* Delivery Method Selection */}
                     <div className="grid grid-cols-2 gap-3 mb-4">
                         <label className={`cursor-pointer p-3 rounded-lg border flex flex-col items-center justify-center gap-1 transition-all ${formData.deliveryMethod === 'pickup' ? 'bg-blue-50 border-blue-500 text-blue-700' : 'bg-white border-gray-200 text-gray-500 hover:border-blue-300'}`}>
@@ -401,11 +414,18 @@ export default function BookingForm({ selectedBike, onCancel, onSubmit }) {
                         </label>
 
                         <motion.label
-                            animate={shakeDelivery ? { x: [-10, 10, -10, 10, 0], borderColor: '#ef4444', backgroundColor: '#fef2f2' } : {}}
-                            transition={{ duration: 0.4 }}
-                            className={`cursor-pointer p-3 rounded-lg border flex flex-col items-center justify-center gap-1 transition-all ${formData.deliveryMethod === 'delivery' ? 'bg-blue-50 border-blue-500 text-blue-700' : 'bg-white border-gray-200 text-gray-500 hover:border-blue-300'}`}
+                            animate={shakeDelivery ? {
+                                x: [0, -20, 20, -20, 20, 0],
+                                transition: { duration: 0.4 }
+                            } : {}}
+                            className={`cursor-pointer p-3 rounded-lg border flex flex-col items-center justify-center gap-1 transition-all ${shakeDelivery
+                                ? 'bg-red-50 border-red-500 text-red-700'
+                                : formData.deliveryMethod === 'delivery'
+                                    ? 'bg-blue-50 border-blue-500 text-blue-700'
+                                    : 'bg-white border-gray-200 text-gray-500 hover:border-blue-300'
+                                }`}
                             onClick={(e) => {
-                                if (formData.duration === '3') {
+                                if (totalDuration === 3) {
                                     e.preventDefault();
                                     setShakeDelivery(true);
                                     setTimeout(() => setShakeDelivery(false), 400);
@@ -420,8 +440,8 @@ export default function BookingForm({ selectedBike, onCancel, onSubmit }) {
                                 onChange={() => setFormData({ ...formData, deliveryMethod: 'delivery' })}
                                 className="hidden"
                             />
-                            <span className={`font-bold text-sm ${shakeDelivery ? 'text-red-500' : ''}`}>Diantar / Jemput</span>
-                            <span className={`text-[10px] uppercase tracking-wider ${shakeDelivery ? 'text-red-400' : ''}`}>+ Ongkir</span>
+                            <span className="font-bold text-sm">Diantar / Jemput</span>
+                            <span className="text-[10px] uppercase tracking-wider">+ Ongkir</span>
                         </motion.label>
                     </div>
 
@@ -514,21 +534,6 @@ export default function BookingForm({ selectedBike, onCancel, onSubmit }) {
                     </div>
                 </div>
 
-                {/* Availability Disclaimer */}
-                <div className="bg-yellow-50 p-3 rounded-lg border border-yellow-100 text-[10px] text-yellow-800 flex items-start gap-2 italic">
-                    <AlertTriangle size={14} className="shrink-0 mt-0.5" />
-                    <span>
-                        <strong>Note:</strong> Unit yang dipilih jika mendadak tidak ready karena banyak hal (servis/laka) akan diinformasikan paling lambat H-1 dengan ditawarkan unit yang selevel dengan pilihan unit pertama.
-                    </span>
-                </div>
-
-                {/* WAITING FOR 3 HOURS NOTIF */}
-                {formData.duration === '3' && (
-                    <div className="flex gap-3 bg-red-50 p-3 rounded-lg border border-red-100 text-red-700 text-xs items-center shadow-sm">
-                        <AlertTriangle size={16} className="shrink-0" />
-                        <span className="font-bold">Sewa 3 Jam TIDAK BISA DIANTAR (Wajib Ambil Sendiri).</span>
-                    </div>
-                )}
 
                 <button type="submit" className="w-full btn py-4 text-lg shadow-xl shadow-blue-500/20 active:scale-95 transition-transform">
                     KONFIRMASI & LANJUT KE FORM
