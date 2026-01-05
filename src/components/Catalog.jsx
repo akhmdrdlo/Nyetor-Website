@@ -13,36 +13,36 @@ const categories = [
 
 // CONFIGURATION
 const FORCE_SPECIAL_MODE = false; // Set to TRUE to disable Regular mode entirely (e.g. Peak Season)
+const SHOW_SEASONAL_TOGGLE = false; // Set to TRUE to show the Season Toggle Button
 
 export default function Catalog({ onSelectBike }) {
     const [priceMode, setPriceMode] = useState(FORCE_SPECIAL_MODE ? 'special' : 'regular'); // 'regular' | 'special'
     const [activeTab, setActiveTab] = useState('super_ekonomis');
 
     const isSpecial = priceMode === 'special';
-    const themeColor = isSpecial ? '#991b1b' : '#004aad'; // Dark Red vs Brand Blue
-    const themeText = isSpecial ? 'text-red-800' : 'text-[#004aad]';
-    const themeGradient = isSpecial ? 'from-red-600 to-red-900' : 'from-[#004aad] to-[#00f3ff]';
-    const themeBgAccent = isSpecial ? 'bg-red-50' : 'bg-blue-50';
+    // IDUL FITRI THEME (Green/Gold/Emerald)
+    const themeColor = isSpecial ? '#047857' : '#004aad'; // Emerald-700 vs Brand Blue
+    const themeText = isSpecial ? 'text-emerald-800' : 'text-[#004aad]';
+    const themeGradient = isSpecial ? 'from-emerald-600 to-yellow-400' : 'from-[#004aad] to-[#00f3ff]';
+    const themeBgAccent = isSpecial ? 'bg-emerald-50' : 'bg-blue-50';
 
     // Data Source Logic
-    // If special, we just use the 'christmas' list directly (flat list).
-    // If regular, we use the activeTab to filter.
-    const currentList = isSpecial ? catalogData.christmas : catalogData[activeTab];
+    const currentList = isSpecial ? catalogData.idul_fitri : catalogData[activeTab];
 
     return (
-        <div className={`relative py-20 overflow-hidden transition-colors duration-700 ${isSpecial ? 'bg-red-50/30' : 'bg-[#f8f9fa]'}`}>
+        <div className={`relative py-20 overflow-hidden transition-colors duration-700 ${isSpecial ? 'bg-emerald-50/30' : 'bg-[#f8f9fa]'}`}>
             {/* Dynamic Backgrounds */}
             <div className="absolute inset-0 z-0">
                 <img
                     src="/bandung.png"
                     alt="Background"
-                    className={`w-full h-full object-cover opacity-10 grayscale contrast-125 transition-all duration-700 ${isSpecial ? 'sepia-[.5] hue-rotate-[-50deg]' : ''}`}
+                    className={`w-full h-full object-cover opacity-10 grayscale contrast-125 transition-all duration-700 ${isSpecial ? 'sepia-[.2] hue-rotate-[90deg]' : ''}`}
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-white via-white/80 to-transparent" />
             </div>
 
             {/* Decor Shapes */}
-            <div className={`absolute top-0 right-0 w-[40%] h-full bg-gradient-to-l to-transparent -skew-x-[20deg] translate-x-[20%] pointer-events-none transition-colors duration-700 ${isSpecial ? 'from-red-100/50' : 'from-blue-50/80'}`} />
+            <div className={`absolute top-0 right-0 w-[40%] h-full bg-gradient-to-l to-transparent -skew-x-[20deg] translate-x-[20%] pointer-events-none transition-colors duration-700 ${isSpecial ? 'from-emerald-100/50' : 'from-blue-50/80'}`} />
 
             <div className="relative z-10 container mx-auto px-4">
 
@@ -56,13 +56,13 @@ export default function Catalog({ onSelectBike }) {
                         PILIH UNIT <span className={`text-transparent bg-clip-text bg-gradient-to-r ${themeGradient}`}>MOTOR</span>
                     </h2>
 
-                    {/* Mode Toggle Switch (Only show if NOT forced special) */}
-                    {!FORCE_SPECIAL_MODE ? (
+                    {/* Mode Toggle Switch (Only show if Configured & NOT forced special) */}
+                    {SHOW_SEASONAL_TOGGLE && !FORCE_SPECIAL_MODE && (
                         <div className="flex justify-center mt-6 mb-8">
                             <div className="bg-white p-1.5 rounded-full shadow-lg border border-gray-200 flex relative">
                                 {/* Animated Background Pill */}
                                 <motion.div
-                                    className={`absolute top-1.5 bottom-1.5 rounded-full shadow-md ${isSpecial ? 'bg-red-600' : 'bg-[#004aad]'}`}
+                                    className={`absolute top-1.5 bottom-1.5 rounded-full shadow-md ${isSpecial ? 'bg-emerald-600' : 'bg-[#004aad]'}`}
                                     layoutId="modePill"
                                     initial={false}
                                     animate={{
@@ -82,15 +82,17 @@ export default function Catalog({ onSelectBike }) {
                                     onClick={() => setPriceMode('special')}
                                     className={`relative z-10 px-6 py-2 rounded-full font-bold text-sm md:text-base transition-colors duration-300 w-32 ${isSpecial ? 'text-white' : 'text-gray-500 hover:text-gray-900'}`}
                                 >
-                                    🎄PERIODE NATARU
+                                    🕌 IDUL FITRI
                                 </button>
                             </div>
                         </div>
-                    ) : (
-                        // If Forced Special, show a static Title/Badge indicating Special Event
+                    )}
+
+                    {/* If Forced Special, show a static Title/Badge indicating Special Event */}
+                    {FORCE_SPECIAL_MODE && (
                         <div className="flex justify-center mt-4 mb-8">
-                            <div className="bg-red-600 text-white px-6 py-2 rounded-full font-bold text-sm md:text-base shadow-lg hover:scale-105 transition-transform flex items-center gap-2">
-                                <span>✨ SPECIAL EVENT PRICING</span>
+                            <div className="bg-emerald-600 text-white px-6 py-2 rounded-full font-bold text-sm md:text-base shadow-lg hover:scale-105 transition-transform flex items-center gap-2">
+                                <span>🕌 SPECIAL EVENT PRICING</span>
                             </div>
                         </div>
                     )}
@@ -103,11 +105,11 @@ export default function Catalog({ onSelectBike }) {
                                 initial={{ opacity: 0, y: 10 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 exit={{ opacity: 0, y: -10 }}
-                                className="max-w-3xl mx-auto bg-red-100 border border-red-200 text-red-800 p-4 rounded-xl shadow-inner mb-8"
+                                className="max-w-3xl mx-auto bg-emerald-100 border border-emerald-200 text-emerald-800 p-4 rounded-xl shadow-inner mb-8"
                             >
-                                <h3 className="font-black text-lg mb-1">🎄 PENYESUAIAN TARIF NATAL DAN TAHUN BARU 🎄</h3>
+                                <h3 className="font-black text-lg mb-1">🕌 PENYESUAIAN TARIF IDUL FITRI 🕌</h3>
                                 <p className="text-sm font-medium">
-                                    Masa Berlaku: <strong>23 Desember 2025 - 4 Januari 2026</strong>* <br />
+                                    Masa Berlaku: <strong>H-7 s/d H+7 Lebaran</strong>* <br />
                                     <span className="text-xs opacity-75">*Dapat berubah sewaktu-waktu.</span>
                                 </p>
                             </motion.div>
@@ -145,7 +147,7 @@ export default function Catalog({ onSelectBike }) {
 
                 {/* Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                    <AnimatePresence mode="wait">
+                    <AnimatePresence>
                         {currentList?.map((bike) => (
                             <motion.div
                                 key={bike.id}
@@ -154,12 +156,12 @@ export default function Catalog({ onSelectBike }) {
                                 animate={{ opacity: 1, y: 0 }}
                                 exit={{ opacity: 0, scale: 0.9 }}
                                 transition={{ duration: 0.4, type: "spring" }}
-                                className={`bg-white rounded-3xl overflow-hidden shadow-xl hover:shadow-2xl transition-all duration-300 group cursor-pointer border relative ${isSpecial ? 'border-red-100' : 'border-gray-100'}`}
+                                className={`bg-white rounded-3xl overflow-hidden shadow-xl hover:shadow-2xl transition-all duration-300 group cursor-pointer border relative ${isSpecial ? 'border-emerald-100' : 'border-gray-100'}`}
                                 onClick={() => onSelectBike(bike)}
                             >
                                 {/* Diagonal Cut Image Container */}
                                 <div className="h-64 bg-gray-100 relative overflow-hidden">
-                                    <div className={`absolute inset-0 transition-colors z-10 ${isSpecial ? 'bg-red-600/5' : 'bg-[#004aad]/5'}`} />
+                                    <div className={`absolute inset-0 transition-colors z-10 ${isSpecial ? 'bg-emerald-600/5' : 'bg-[#004aad]/5'}`} />
                                     <img
                                         src={bike.image}
                                         alt={bike.name}
@@ -167,7 +169,7 @@ export default function Catalog({ onSelectBike }) {
                                     />
 
                                     {/* Sharp Badge */}
-                                    <div className={`absolute bottom-0 left-0 px-6 py-2 rounded-tr-3xl z-20 shadow-lg ${isSpecial ? 'bg-red-600' : 'bg-[#004aad]'} text-white`}>
+                                    <div className={`absolute bottom-0 left-0 px-6 py-2 rounded-tr-3xl z-20 shadow-lg ${isSpecial ? 'bg-emerald-600' : 'bg-[#004aad]'} text-white`}>
                                         <h3 className="text-lg font-black italic tracking-wider">{bike.name}</h3>
                                     </div>
                                 </div>
@@ -189,7 +191,7 @@ export default function Catalog({ onSelectBike }) {
                                     <div className="flex flex-wrap gap-2 mb-6">
                                         {bike.features.length > 0 ? (
                                             bike.features.map((feat, idx) => (
-                                                <span key={idx} className={`text-[10px] uppercase tracking-wider font-bold px-3 py-1 rounded-full border flex items-center gap-1 ${isSpecial ? 'bg-red-50 text-red-700 border-red-100' : 'bg-blue-50 text-blue-700 border-blue-100'}`}>
+                                                <span key={idx} className={`text-[10px] uppercase tracking-wider font-bold px-3 py-1 rounded-full border flex items-center gap-1 ${isSpecial ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-blue-50 text-blue-700 border-blue-100'}`}>
                                                     <Check size={10} /> {feat}
                                                 </span>
                                             ))
@@ -200,7 +202,7 @@ export default function Catalog({ onSelectBike }) {
                                         )}
                                     </div>
 
-                                    <button className={`w-full py-4 text-white rounded-2xl font-bold shadow-lg transition-colors flex items-center justify-center gap-2 relative overflow-hidden ${isSpecial ? 'bg-red-900 group-hover:bg-red-700' : 'bg-[#0a0a0a] group-hover:bg-[#004aad]'}`}>
+                                    <button className={`w-full py-4 text-white rounded-2xl font-bold shadow-lg transition-colors flex items-center justify-center gap-2 relative overflow-hidden ${isSpecial ? 'bg-emerald-900 group-hover:bg-emerald-700' : 'bg-[#0a0a0a] group-hover:bg-[#004aad]'}`}>
                                         <span className="relative z-10">PILIH UNIT INI</span>
                                     </button>
                                 </div>

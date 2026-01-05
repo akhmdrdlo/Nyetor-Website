@@ -4,6 +4,11 @@ import Catalog from './components/Catalog';
 import BookingForm from './components/BookingForm';
 import Invoice from './components/Invoice';
 import BookingSuccess from './components/BookingSuccess';
+import About from './components/About';
+import Services from './components/Services';
+import TermsFAQ from './components/TermsFAQ';
+import Location from './components/Location';
+import Footer from './components/Footer';
 import './index.css';
 
 // Lib
@@ -53,30 +58,40 @@ function App() {
     };
     setInvoiceData(invData);
 
-    // 2. Wait for render (Next Tick) and Download
+    // 2. Wait for render (Next Tick) -> DIRECT TO SUCCESS (No Auto Download)
     setTimeout(() => {
-      downloadInvoice(invData).then(() => {
-        // 3. Move to Success View
-        setView('success');
-        // Mock hidden submission
-        console.log("Submitting to hidden iframe/API... (Pending IDs)");
-      });
+      // 3. Move to Success View
+      setView('success');
+      // Mock hidden submission
+      console.log("Submitting to hidden iframe/API... (Pending IDs)");
     }, 500);
   };
 
   return (
     <div className="min-h-screen pb-20">
 
-      {/* Hero Section */}
-      {view === 'hero' && <Hero onStart={handleStart} />}
-
-      {/* Catalog Section */}
+      {/* LANDING PAGE CONTENT (Hero + Catalog + Sections) */}
       {(view === 'hero' || view === 'catalog') && (
-        <div id="catalog-section" className={view === 'hero' ? 'hidden' : 'block'}>
-          <div className="container">
-            <Catalog onSelectBike={handleSelectBike} />
+        <>
+          <Hero onStart={handleStart} />
+
+          <About />
+
+          <Services />
+
+          <TermsFAQ />
+
+          <div id="catalog-section" className="block relative z-10">
+            {/* Spacer to pull overlap if needed, or just container */}
+            <div className="container">
+              <Catalog onSelectBike={handleSelectBike} />
+            </div>
           </div>
-        </div>
+
+          <Location />
+
+          <Footer />
+        </>
       )}
 
       {/* Booking Form Overlay */}

@@ -58,43 +58,43 @@ export default function BookingSuccess({ invoiceData, googleFormUrl, onDownloadI
                     </p>
 
                     <div className="space-y-4">
-                        {/* 1. Primary Action: WhatsApp Confirm */}
+                        {/* 1. Primary Action: Google Form (Wajib) */}
                         <a
-                            href={whatsappUrl}
+                            href={googleFormUrl}
                             target="_blank"
                             rel="noreferrer"
                             className="flex items-center justify-center gap-2 w-full py-4 bg-[#004aad] text-white rounded-xl font-bold text-lg shadow-lg hover:bg-blue-800 transition-all hover:scale-[1.02] active:scale-95"
                         >
-                            <Smartphone size={20} />
-                            KONFIRMASI KE WHATSAPP
+                            <ExternalLink size={20} />
+                            ISI DATA JAMINAN (WAJIB)
                         </a>
 
-                        {/* 2. Secondary: Download Invoice Again */}
+                        {/* 2. Secondary: Download Invoice */}
                         <button
                             onClick={onDownloadInvoice}
-                            className="flex items-center justify-center gap-2 w-full py-3 bg-white border-2 border-gray-200 text-gray-600 rounded-xl font-bold hover:border-[#004aad] hover:text-[#004aad] transition-colors"
+                            className="flex items-center justify-center gap-2 w-full py-3 bg-white border-2 border-[#004aad] text-[#004aad] rounded-xl font-bold hover:bg-blue-50 transition-colors"
                         >
                             <Download size={18} />
-                            Download Invoice Lagi
+                            Download Invoice
                         </button>
 
-                        {/* 3. Fallback Link: Google Form */}
-                        <div className="pt-4 border-t border-gray-100 mt-6">
-                            <p className="text-xs text-gray-400 mb-2">Belum mengisi data jaminan?</p>
+                        {/* 3. Fallback Link: WA */}
+                        <div className="pt-2">
                             <a
-                                href={googleFormUrl}
+                                href={whatsappUrl}
                                 target="_blank"
                                 rel="noreferrer"
-                                className="inline-flex items-center gap-1 text-sm text-[#004aad] font-bold hover:underline"
+                                className="inline-flex items-center gap-1 text-sm text-green-600 font-bold hover:underline"
                             >
-                                <ExternalLink size={14} />
-                                Isi Formulir Kelengkapan Data
+                                <Smartphone size={14} />
+                                Konfirmasi Manual ke WhatsApp
                             </a>
                         </div>
+
                         {/* 4. kembali ke beranda */}
                         <button
                             onClick={() => window.location.reload()}
-                            className="flex items-center justify-center gap-2 w-full py-3 bg-white border-2 border-gray-200 text-gray-600 rounded-xl font-bold hover:border-[#004aad] hover:text-[#004aad] transition-colors"
+                            className="flex items-center justify-center gap-2 w-full py-3 bg-white border-2 border-gray-200 text-gray-600 rounded-xl font-bold hover:border-gray-400 hover:text-gray-800 transition-colors"
                         >
                             <Home size={18} />
                             Kembali ke Beranda
