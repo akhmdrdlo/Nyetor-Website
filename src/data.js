@@ -40,7 +40,7 @@ export const catalogData = {
         {
             id: "beat_street",
             name: "HONDA BEAT STREET",
-            image: "/beat_streetnew.png",
+            image: "/beat_street.png",
             prices: { 3: 40000, 6: 45000, 12: 65000, 24: 110000 },
             features: []
         },
@@ -162,7 +162,7 @@ export const catalogData = {
             id: "beat_street_lebaran",
             name: "HONDA BEAT STREET / BEAT 2018",
             image: "/beat_streetnew.png",
-            prices: { 6: 55000, 12: 70000, 24: 110000 },
+            prices: { 6: 55000, 12: 70000, 24: 125000 },
             features: []
         },
         {
@@ -208,8 +208,8 @@ export const catalogData = {
             features: []
         },
         {
-            id: "scoopy_keyless_lebaran",
-            name: "ALLNEW SCOOPY KEYLESS 2025",
+            id: "scoopy_keyless_xmas",
+            name: "ALL NEW SCOOPY KEYLESS 2025",
             image: "/scoopy_keyless.png",
             prices: { 6: 70000, 12: 85000, 24: 135000 },
             features: []
