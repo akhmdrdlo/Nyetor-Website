@@ -67,7 +67,18 @@ export default function BookingSuccess({ invoiceData, googleFormUrl, onDownloadI
                             DOWNLOAD INVOICE
                         </button>
 
-                        {/* 2. Secondary: WA */}
+                        {/* 2. Secondary: Google Form (Manual Link) */}
+                        <a
+                            href={googleFormUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="flex items-center justify-center gap-2 w-full py-3 bg-white border-2 border-[#004aad] text-[#004aad] rounded-xl font-bold hover:bg-blue-50 transition-colors"
+                        >
+                            <ExternalLink size={18} />
+                            ISI DATA JAMINAN
+                        </a>
+
+                        {/* 3. Third: WA */}
                         <a
                             href={whatsappUrl}
                             target="_blank"
@@ -80,7 +91,7 @@ export default function BookingSuccess({ invoiceData, googleFormUrl, onDownloadI
 
                         {/* 3. Kembali */}
                         <button
-                            onClick={() => window.location.reload()}
+                            onClick={() => window.location.href = '/'}
                             className="flex items-center justify-center gap-2 w-full py-3 bg-white border-2 border-gray-200 text-gray-600 rounded-xl font-bold hover:border-gray-400 hover:text-gray-800 transition-colors"
                         >
                             <Home size={18} />

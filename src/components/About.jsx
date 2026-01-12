@@ -42,7 +42,7 @@ export default function About() {
 
                         <div className="flex gap-8 border-t border-gray-100 pt-8">
                             <div>
-                                <h4 className="text-4xl font-black text-[#004aad]">50+</h4>
+                                <h4 className="text-4xl font-black text-[#004aad]">20+</h4>
                                 <p className="text-sm text-gray-500 font-medium mt-1">Ready Unit</p>
                             </div>
                             <div>

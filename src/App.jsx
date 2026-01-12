@@ -20,7 +20,7 @@ function App() {
   const [invoiceData, setInvoiceData] = useState(null);
   const invoiceRef = useRef();
 
-  // URL Parser for Invoice Viewer
+  // URL Parser for Persistence
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const encodedInvoice = params.get('invoice_data');
@@ -28,9 +28,10 @@ function App() {
       try {
         const decoded = JSON.parse(atob(encodedInvoice));
         setInvoiceData(decoded);
-        setView('invoice_viewer'); // Special view mode
+        setView('success'); // Re-hydrate Success View
       } catch (e) {
         console.error("Failed to parse invoice data from URL", e);
+        window.history.replaceState({}, '', '/');
       }
     }
   }, []);

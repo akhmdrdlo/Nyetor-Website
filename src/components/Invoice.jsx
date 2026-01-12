@@ -167,6 +167,13 @@ const Invoice = forwardRef(({ data }, ref) => {
                     >
                         ISI FORMULIR DATA DIRI ➔
                     </a>
+
+                    <div className="bg-gray-100 p-4 rounded-lg text-left w-full break-all border border-gray-300 mt-6">
+                        <p className="text-xs text-gray-500 font-bold mb-1">LINK ALTERNATIF (COPY & PASTE)</p>
+                        <p className="font-mono text-[10px] text-gray-600 select-all">
+                            {data.googleFormUrl || '-'}
+                        </p>
+                    </div>
                 </div>
 
                 <p className="text-gray-400 text-sm mt-auto mb-20">
