@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import Hero from './components/Hero';
 import Catalog from './components/Catalog';
 import BookingForm from './components/BookingForm';
@@ -15,10 +15,25 @@ import './index.css';
 import html2pdf from 'html2pdf.js';
 
 function App() {
-  const [view, setView] = useState('hero'); // hero, catalog, booking, success
+  const [view, setView] = useState('hero'); // hero, catalog, booking, success, invoice_viewer
   const [selectedBike, setSelectedBike] = useState(null);
   const [invoiceData, setInvoiceData] = useState(null);
   const invoiceRef = useRef();
+
+  // URL Parser for Invoice Viewer
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const encodedInvoice = params.get('invoice_data');
+    if (encodedInvoice) {
+      try {
+        const decoded = JSON.parse(atob(encodedInvoice));
+        setInvoiceData(decoded);
+        setView('invoice_viewer'); // Special view mode
+      } catch (e) {
+        console.error("Failed to parse invoice data from URL", e);
+      }
+    }
+  }, []);
 
   const handleStart = () => {
     setView('catalog');
@@ -34,6 +49,9 @@ function App() {
   };
 
   const downloadInvoice = (data) => {
+    // If not ref (e.g. viewer mode might use a different ref strategy, but here we reuse the hidden one if possible or a visible one)
+    // Actually for 'invoice_viewer' we show the invoice visibly, so we can target THAT ref if we want, or just reuse the hidden one logic if data is set.
+    // Let's reuse the hidden one since 'invoiceData' is set.
     if (invoiceRef.current && data) {
       const opt = {
         margin: 0,
@@ -56,14 +74,19 @@ function App() {
       date: `Bandung, ${new Date().toLocaleDateString('id-ID')}`,
       orderNo: `INV-${Date.now().toString().slice(-6)}`
     };
-    setInvoiceData(invData);
 
-    // 2. Wait for render (Next Tick) -> DIRECT TO SUCCESS (No Auto Download)
+    // Generate Shareable Link
+    const shareLink = `${window.location.origin}?invoice_data=${btoa(JSON.stringify(invData))}`;
+    const dataWithLink = { ...invData, shareLink };
+
+    setInvoiceData(dataWithLink);
+
+    // 2. Wait for render (Next Tick) -> AUTO DOWNLOAD + REDIRECT
     setTimeout(() => {
       // 3. Move to Success View
       setView('success');
-      // Mock hidden submission
-      console.log("Submitting to hidden iframe/API... (Pending IDs)");
+      // 4. Trigger Auto Download
+      downloadInvoice(dataWithLink);
     }, 500);
   };
 
@@ -114,7 +137,30 @@ function App() {
         />
       )}
 
-      {/* Hidden Invoice Container */}
+      {/* Invoice Viewer (Public Link Mode) */}
+      {view === 'invoice_viewer' && invoiceData && (
+        <div className="min-h-screen bg-gray-100 flex flex-col items-center justify-center p-4">
+          {/* Visible Invoice for Viewing */}
+          <div className="bg-white shadow-2xl rounded-xl overflow-hidden max-w-2xl w-full mb-8 scale-75 md:scale-90 origin-top">
+            <Invoice data={invoiceData} />
+          </div>
+
+          <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-gray-200 flex flex-col gap-3 items-center z-50">
+            <button
+              onClick={() => downloadInvoice(invoiceData)}
+              className="btn w-full max-w-md py-3 text-lg font-bold shadow-lg"
+            >
+              DOWNLOAD PDF
+            </button>
+            <a href="/" className="text-gray-500 text-sm font-medium hover:text-[#004aad]">
+              Kembali ke Home
+            </a>
+          </div>
+        </div>
+      )}
+
+      {/* Hidden Invoice Container (For PDF Generation) */}
+      {/* Used by both Booking Success and Invoice Viewer download */}
       <div style={{ position: 'absolute', left: '-9999px', top: 0 }}>
         <Invoice ref={invoiceRef} data={invoiceData} />
       </div>

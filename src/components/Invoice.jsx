@@ -132,10 +132,53 @@ const Invoice = forwardRef(({ data }, ref) => {
                 </div>
             </div>
 
-            {/* Footer Decoration */}
+            {/* Footer Decoration Page 1 */}
             <div className="absolute bottom-0 left-0 w-full h-8 bg-gray-100 flex items-center justify-between px-8 text-[10px] text-gray-400">
                 <span>instagram: @nyewainmotornyetor</span>
                 <span>tiktok: @nyetor.id</span>
+            </div>
+
+            {/* --- PAGE BREAK --- */}
+            <div className="html2pdf__page-break"></div>
+
+            {/* --- PAGE 2: ACTION ITEMS --- */}
+            <div className="bg-white text-black pt-20 pb-10 px-10 h-[1122px] font-sans relative flex flex-col items-center text-center">
+                {/* Top Bar Decoration */}
+                <div className="absolute top-0 left-0 w-full h-4 bg-[#004aad]"></div>
+
+                <img src="/Nyetor Logo Transparent.png" alt="Nyetor Logo" className="h-32 mb-8 drop-shadow-lg" />
+
+                <h1 className="text-4xl font-black text-[#004aad] mb-4">LANGKAH TERAKHIR</h1>
+                <p className="text-xl text-gray-600 mb-12 max-w-lg leading-relaxed">
+                    Halo <strong>{name}</strong>, terima kasih telah booking di <strong>NYETOR.ID</strong>.<br />
+                    Untuk memproses pesanan Anda, kami membutuhkan data jaminan (KTP) Anda.
+                </p>
+
+                <div className="bg-blue-50 p-8 rounded-2xl border-2 border-blue-100 mb-12 w-full max-w-xl">
+                    <h2 className="text-2xl font-bold text-gray-800 mb-4">KLIK TOMBOL DI BAWAH</h2>
+                    <p className="text-gray-500 mb-8">Silahkan klik tombol berikut untuk melengkapi formulir data diri & upload foto KTP.</p>
+
+                    <a
+                        href={data.googleFormUrl || "#"}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-block bg-[#004aad] text-white text-2xl font-bold py-6 px-12 rounded-xl shadow-xl hover:bg-blue-800 transition-transform hover:scale-105"
+                        style={{ textDecoration: 'none' }} // Ensure it looks good in PDF
+                    >
+                        ISI FORMULIR DATA DIRI ➔
+                    </a>
+                </div>
+
+                <p className="text-gray-400 text-sm mt-auto mb-20">
+                    *Link di atas dapat diklik langsung dari dokumen PDF ini.<br />
+                    Atau scan QR Code jika tersedia.
+                </p>
+
+                {/* Footer Decoration Page 2 */}
+                <div className="absolute bottom-0 left-0 w-full h-8 bg-gray-100 flex items-center justify-between px-8 text-[10px] text-gray-400">
+                    <span>instagram: @nyewainmotornyetor</span>
+                    <span>Page 2 of 2</span>
+                </div>
             </div>
         </div>
     );

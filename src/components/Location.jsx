@@ -16,8 +16,8 @@ let DefaultIcon = L.icon({
 L.Marker.prototype.options.icon = DefaultIcon;
 
 // Coordinate Garasi Nyetor (Based on Address: Terusan Gang Kujang, Cipadung)
-// Approx Coords for Cipadung, Cibiru area: -6.9248, 107.7206
-const position = [-6.9248, 107.7206];
+// Approx Coords for Cipadung, Cibiru area: -6.930130, 107.715293
+const position = [-6.930130, 107.715293];
 
 export default function Location() {
     return (

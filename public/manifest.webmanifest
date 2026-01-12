@@ -1,0 +1,20 @@
+{
+    "name": "Nyetor.id - Sewa Motor Bandung",
+    "short_name": "Nyetor.id",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#ffffff",
+    "theme_color": "#004aad",
+    "icons": [
+        {
+            "src": "/Nyetor Logo Transparent.png",
+            "sizes": "192x192",
+            "type": "image/png"
+        },
+        {
+            "src": "/Nyetor Logo Transparent.png",
+            "sizes": "512x512",
+            "type": "image/png"
+        }
+    ]
+}
