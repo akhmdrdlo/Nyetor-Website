@@ -142,7 +142,7 @@ const Invoice = forwardRef(({ data }, ref) => {
             <div className="html2pdf__page-break"></div>
 
             {/* --- PAGE 2: ACTION ITEMS --- */}
-            <div className="bg-white text-black pt-20 pb-10 px-10 h-[1122px] font-sans relative flex flex-col items-center text-center">
+            <div className="bg-white text-black pt-20 pb-10 px-10 h-[1080px] font-sans relative flex flex-col items-center text-center">
                 {/* Top Bar Decoration */}
                 <div className="absolute top-0 left-0 w-full h-4 bg-[#004aad]"></div>
 

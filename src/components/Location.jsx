@@ -47,7 +47,7 @@ export default function Location() {
 
                 <div className="flex justify-center mt-8">
                     <a
-                        href="https://www.google.com/maps/search/?api=1&query=Terusan+Gang+Kujang,+Kp+Jl.+Desa+Cipadung,+Cipadung,+Kec.+Cibiru,+Kota+Bandung,+Jawa+Barat+40614"
+                        href="https://www.google.com/maps/search/?api=1&query=-6.930130,107.715293"
                         target="_blank"
                         rel="noreferrer"
                         className="px-8 py-3 bg-[#004aad] text-white rounded-full font-bold shadow-lg hover:bg-blue-800 transition-transform hover:scale-105 flex items-center gap-2"
