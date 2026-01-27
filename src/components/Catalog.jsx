@@ -5,6 +5,7 @@ import { Check } from 'lucide-react';
 
 const categories = [
     { id: 'super_ekonomis', label: 'Super Ekonomis', color: 'bg-blue-600' },
+    { id: 'unit_bebek', label: 'Unit Bebek', color: 'bg-orange-600' },
     { id: 'ekonomis', label: 'Ekonomis Unit', color: 'bg-indigo-600' },
     { id: 'silver', label: 'Silver Unit', color: 'bg-gray-600' },
     { id: 'gold', label: 'Gold Unit', color: 'bg-yellow-600' },

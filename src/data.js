@@ -1,11 +1,27 @@
 export const catalogData = {
+    unit_bebek: [
+        {
+            id: "jupiter_z",
+            name: "YAMAHA JUPITER Z",
+            image: "/jupiterz.png",
+            prices: { 6: 30000, 12: 40000, 24: 60000 },
+            features: []
+        }
+    ],
     super_ekonomis: [
         {
             id: "mio_m3",
             name: "YAMAHA MIO M3",
             image: "/mio.png",
-            prices: { 6: 35000, 12: 45000, 24: 70000 },
+            prices: { 6: 35000, 12: 45000, 24: 65000 },
             features: ["Include Sarung Tangan"]
+        },
+        {
+            id: "mio_z",
+            name: "YAMAHA MIO Z",
+            image: "/mioz.png",
+            prices: { 3: 30000, 6: 35000, 12: 55000, 24: 75000 },
+            features: ["Super Ekonomis"]
         },
         {
             id: "vario_kzr",
@@ -18,24 +34,24 @@ export const catalogData = {
             id: "beat_pop",
             name: "HONDA BEAT POP",
             image: "/beat_pop.png",
-            prices: { 3: 35000, 6: 40000, 12: 60000, 24: 90000 },
+            prices: { 3: 35000, 6: 40000, 12: 60000, 24: 95000 },
             features: ["Include Sarung Tangan"]
         }
     ],
     ekonomis: [
+        {
+            id: "beat_2018",
+            name: "HONDA BEAT 2018",
+            image: "/beat2018.png",
+            prices: { 3: 40000, 6: 45000, 12: 65000, 24: 100000 },
+            features: []
+        },
         {
             id: "genio",
             name: "HONDA GENIO 2022",
             image: "/genio2022.png",
             prices: { 3: 40000, 6: 45000, 12: 65000, 24: 105000 },
             features: ["Include Sarung Tangan"]
-        },
-        {
-            id: "beat_2018",
-            name: "HONDA BEAT 2018",
-            image: "/beat2018.png",
-            prices: { 3: 40000, 6: 45000, 12: 65000, 24: 105000 },
-            features: []
         },
         {
             id: "beat_street",
@@ -48,7 +64,7 @@ export const catalogData = {
             id: "beat_deluxe",
             name: "HONDA BEAT DELUXE",
             image: "/beat_deluxe.png",
-            prices: { 3: 40000, 6: 45000, 12: 65000, 24: 110000 },
+            prices: { 3: 45000, 6: 50000, 12: 70000, 24: 110000 },
             features: ["Include Sarung Tangan"]
         },
         {
@@ -82,33 +98,33 @@ export const catalogData = {
             features: []
         },
         {
-            id: "vario_led_new",
-            name: "VARIO LED NEW",
-            image: "/vario_led_new.png",
-            prices: { 3: 50000, 6: 55000, 12: 80000, 24: 130000 },
-            features: []
-        },
-        {
-            id: "vario_150_keyless",
-            name: "VARIO 150CC KEYLESS",
+            id: "vario_160_keyless",
+            name: "VARIO 160 KEYLESS",
             image: "/vario_led150.png",
-            prices: { 3: 55000, 6: 60000, 12: 80000, 24: 135000 },
+            prices: { 3: 55000, 6: 60000, 12: 80000, 24: 130000 },
             features: ["Include Sarung Tangan"]
         }
     ],
     gold: [
         {
-            id: "pcx_vario160",
-            name: "HONDA PCX / VARIO 160",
-            image: "/pcxnew.png",
-            prices: { 3: 55000, 6: 60000, 12: 85000, 24: 140000 },
-            features: []
+            id: "lexi_abs",
+            name: "LEXI ABS 155CC KEYLESS",
+            image: "/yamahalexi.png",
+            prices: { 3: 55000, 6: 60000, 12: 85000, 24: 135000 },
+            features: ["Include Sarung Tangan"]
         },
         {
             id: "nmax_old",
             name: "YAMAHA NMAX OLD 2019",
             image: "/nmax.png",
-            prices: { 3: 55000, 6: 60000, 12: 85000, 24: 145000 },
+            prices: { 3: 55000, 6: 60000, 12: 85000, 24: 140000 },
+            features: []
+        },
+        {
+            id: "pcx",
+            name: "HONDA PCX",
+            image: "/pcxnew.png",
+            prices: { 3: 55000, 6: 60000, 12: 90000, 24: 145000 },
             features: []
         },
         {
