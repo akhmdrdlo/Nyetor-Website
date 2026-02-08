@@ -100,8 +100,15 @@ export const catalogData = {
         {
             id: "vario_160_keyless",
             name: "VARIO 160 KEYLESS",
-            image: "/vario_led150.png",
+            image: "/vario160.png",
             prices: { 3: 55000, 6: 60000, 12: 80000, 24: 130000 },
+            features: ["Include Sarung Tangan"]
+        },
+        {
+            id: "fazzio_keyless",
+            name: "YAMAHA FAZZIO KEYLESS",
+            image: "/fazzio.png",
+            prices: { 3: 50000, 6: 60000, 12: 80000, 24: 120000 },
             features: ["Include Sarung Tangan"]
         }
     ],
@@ -165,111 +172,176 @@ export const catalogData = {
             features: ["Kapasitas Besar"]
         }
     ],
+    // WARLOK SECTION (Restricted List)
+    warlok: [
+        // Unit Bebek
+        {
+            id: "jupiter_z_w",
+            name: "YAMAHA JUPITER Z",
+            image: "/jupiterz.png",
+            prices: { 6: 55000, 12: 70000, 24: 90000 },
+            features: []
+        },
+        // Super Ekonomis
+        {
+            id: "mio_m3_w",
+            name: "YAMAHA MIO M3",
+            image: "/mio.png",
+            prices: { 6: 65000, 12: 80000, 24: 100000 },
+            features: ["Include Sarung Tangan"]
+        },
+        {
+            id: "beat_pop_w",
+            name: "HONDA BEAT POP",
+            image: "/beat_pop.png",
+            prices: { 6: 75000, 12: 90000, 24: 110000 },
+            features: ["Include Sarung Tangan"]
+        },
+        // Ekonomis
+        {
+            id: "genio_w",
+            name: "HONDA GENIO 2022",
+            image: "/genio2022.png",
+            prices: { 6: 85000, 12: 100000, 24: 120000 },
+            features: ["Include Sarung Tangan"]
+        },
+        {
+            id: "beat_deluxe_w",
+            name: "HONDA BEAT DELUXE",
+            image: "/beat_deluxe.png",
+            prices: { 6: 95000, 12: 110000, 24: 130000 },
+            features: ["Include Sarung Tangan"]
+        },
+        {
+            id: "scoopy_2023_w",
+            name: "HONDA SCOOPY 2023",
+            image: "/scoopy2023.png",
+            prices: { 6: 105000, 12: 120000, 24: 140000 },
+            features: ["Include Sarung Tangan"]
+        },
+        // Silver
+        {
+            id: "gear_matic_w",
+            name: "YAMAHA GEAR MATIC",
+            image: "/gear_matic.png",
+            prices: { 6: 115000, 12: 130000, 24: 150000 },
+            features: ["Include Sarung Tangan"]
+        },
+        {
+            id: "vario_led_old_w",
+            name: "VARIO LED OLD",
+            image: "/vario_ledOld.png",
+            prices: { 6: 125000, 12: 140000, 24: 160000 },
+            features: []
+        },
+        // Gold
+        {
+            id: "lexi_abs_w",
+            name: "LEXI ABS 155CC KEYLESS",
+            image: "/yamahalexi.png",
+            prices: { 6: 135000, 12: 150000, 24: 170000 },
+            features: ["Include Sarung Tangan"]
+        }
+    ],
+
     // IDUL FITRI SPECIAL CATALOG
     idul_fitri: [
+        {
+            id: "jupiter_z_lebaran",
+            name: "YAMAHA JUPITER Z",
+            image: "/jupiterz.png",
+            prices: { 6: 45000, 12: 55000, 24: 80000 },
+            features: []
+        },
         {
             id: "mio_m3_lebaran",
             name: "YAMAHA MIO M3",
             image: "/mio.png",
-            prices: { 12: 60000, 24: 80000 },
+            prices: { 12: 60000, 24: 85000 },
             features: []
         },
         {
-            id: "beat_street_lebaran",
-            name: "HONDA BEAT STREET / BEAT 2018",
-            image: "/beat_streetnew.png",
-            prices: { 6: 55000, 12: 70000, 24: 125000 },
+            id: "mio_z_lebaran",
+            name: "YAMAHA MIO Z",
+            image: "/mioz.png",
+            prices: { 12: 70000, 24: 90000 },
             features: []
         },
         {
             id: "vario_kzr_lebaran",
             name: "HONDA VARIO KZR",
             image: "/vario_kzr.png",
-            prices: { 6: 50000, 12: 65000, 24: 100000 },
+            prices: { 12: 70000, 24: 105000 },
             features: []
         },
         {
             id: "beat_pop_lebaran",
             name: "HONDA BEAT POP",
             image: "/beat_pop.png",
-            prices: { 6: 50000, 12: 70000, 24: 105000 },
-            features: []
-        },
-        {
-            id: "gear_matic_lebaran",
-            name: "YAMAHA GEAR MATIC",
-            image: "/gear_matic.png",
-            prices: { 6: 60000, 12: 75000, 24: 115000 },
+            prices: { 12: 75000, 24: 115000 },
             features: []
         },
         {
             id: "genio_lebaran",
             name: "HONDA GENIO",
             image: "/genio2022.png",
-            prices: { 6: 65000, 12: 75000, 24: 120000 },
+            prices: { 12: 80000, 24: 125000 },
+            features: []
+        },
+        {
+            id: "beat_street_lebaran",
+            name: "HONDA BEAT STREET",
+            image: "/beat_street.png",
+            prices: { 12: 80000, 24: 130000 },
             features: []
         },
         {
             id: "beat_deluxe_lebaran",
             name: "HONDA BEAT DELUXE",
             image: "/beat_deluxe.png",
-            prices: { 6: 65000, 12: 80000, 24: 125000 },
+            prices: { 12: 85000, 24: 130000 },
             features: []
         },
         {
             id: "scoopy_2023_lebaran",
             name: "HONDA SCOOPY 2023",
             image: "/scoopy2023.png",
-            prices: { 6: 70000, 12: 85000, 24: 130000 },
+            prices: { 12: 85000, 24: 130000 },
             features: []
         },
         {
-            id: "scoopy_keyless_xmas",
-            name: "ALL NEW SCOOPY KEYLESS 2025",
-            image: "/scoopy_keyless.png",
-            prices: { 6: 70000, 12: 85000, 24: 135000 },
+            id: "gear_matic_lebaran",
+            name: "YAMAHA GEAR",
+            image: "/gear_matic.png",
+            prices: { 12: 90000, 24: 140000 },
             features: []
         },
         {
             id: "vario_led_old_lebaran",
             name: "VARIO LED OLD",
             image: "/vario_ledOld.png",
-            prices: { 6: 70000, 12: 90000, 24: 140000 },
+            prices: { 12: 90000, 24: 145000 },
             features: []
         },
         {
-            id: "vario_led_new_lebaran",
-            name: "VARIO LED NEW",
-            image: "/vario_led_new.png",
-            prices: { 6: 70000, 12: 90000, 24: 145000 },
-            features: []
-        },
-        {
-            id: "vario_150_keyless_lebaran",
-            name: "VARIO 150CC KEYLESS",
-            image: "/vario_led150.png",
-            prices: { 6: 75000, 12: 95000, 24: 150000 },
-            features: []
-        },
-        {
-            id: "pcx_lebaran",
-            name: "HONDA PCX",
-            image: "/pcx.png",
-            prices: { 6: 75000, 12: 95000, 24: 155000 },
+            id: "fazzio_lebaran",
+            name: "YAMAHA FAZZIO KEYLESS",
+            image: "/fazzio.png",
+            prices: { 12: 95000, 24: 150000 },
             features: []
         },
         {
             id: "nmax_old_lebaran",
             name: "YAMAHA NMAX OLD 2019",
             image: "/nmax.png",
-            prices: { 6: 85000, 12: 100000, 24: 155000 },
+            prices: { 12: 105000, 24: 165000 },
             features: []
         },
         {
-            id: "nmax_keyless_lebaran",
-            name: "YAMAHA NMAX KEYLESS 2021",
-            image: "/nmax_keyless.png",
-            prices: { 6: 85000, 12: 100000, 24: 155000 },
+            id: "lexi_lx_lebaran",
+            name: "LEXI LX 155 KEYLESS",
+            image: "/yamahalexi.png",
+            prices: { 12: 105000, 24: 170000 },
             features: []
         }
     ]

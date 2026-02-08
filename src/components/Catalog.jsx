@@ -14,36 +14,64 @@ const categories = [
 
 // CONFIGURATION
 const FORCE_SPECIAL_MODE = false; // Set to TRUE to disable Regular mode entirely (e.g. Peak Season)
-const SHOW_SEASONAL_TOGGLE = false; // Set to TRUE to show the Season Toggle Button
+const SHOW_SEASONAL_TOGGLE = true; // Set to TRUE to show the Season Toggle Button
 
 export default function Catalog({ onSelectBike }) {
     const [priceMode, setPriceMode] = useState(FORCE_SPECIAL_MODE ? 'special' : 'regular'); // 'regular' | 'special'
     const [activeTab, setActiveTab] = useState('super_ekonomis');
 
     const isSpecial = priceMode === 'special';
-    // IDUL FITRI THEME (Green/Gold/Emerald)
-    const themeColor = isSpecial ? '#047857' : '#004aad'; // Emerald-700 vs Brand Blue
-    const themeText = isSpecial ? 'text-emerald-800' : 'text-[#004aad]';
-    const themeGradient = isSpecial ? 'from-emerald-600 to-yellow-400' : 'from-[#004aad] to-[#00f3ff]';
-    const themeBgAccent = isSpecial ? 'bg-emerald-50' : 'bg-blue-50';
+    const isWarlok = priceMode === 'warlok';
+    const isRegular = priceMode === 'regular';
+
+    // THEME LOGIC
+    let themeColor = '#004aad'; // Blue (Regular)
+    let themeText = 'text-[#004aad]';
+    let themeBgAccent = 'bg-blue-50';
+    let themeGradient = 'from-[#004aad] to-[#00f3ff]';
+    let themeBorder = 'border-gray-100';
+    let themeBg = 'bg-[#f8f9fa]';
+    let themeOverlay = 'bg-[#004aad]/5';
+
+    if (isSpecial) {
+        // IDUL FITRI (Emerald/Green)
+        themeColor = '#047857';
+        themeText = 'text-emerald-800';
+        themeBgAccent = 'bg-emerald-50';
+        themeGradient = 'from-emerald-600 to-yellow-400';
+        themeBorder = 'border-emerald-100';
+        themeBg = 'bg-emerald-50/30';
+        themeOverlay = 'bg-emerald-600/5';
+    } else if (isWarlok) {
+        // WARLOK (Purple/Indigo)
+        themeColor = '#7c3aed'; // Violet-600
+        themeText = 'text-violet-800';
+        themeBgAccent = 'bg-violet-50';
+        themeGradient = 'from-violet-600 to-fuchsia-400';
+        themeBorder = 'border-violet-100';
+        themeBg = 'bg-violet-50/30';
+        themeOverlay = 'bg-violet-600/5';
+    }
 
     // Data Source Logic
-    const currentList = isSpecial ? catalogData.idul_fitri : catalogData[activeTab];
+    let currentList = catalogData[activeTab];
+    if (isSpecial) currentList = catalogData.idul_fitri;
+    if (isWarlok) currentList = catalogData.warlok;
 
     return (
-        <div className={`relative py-20 overflow-hidden transition-colors duration-700 ${isSpecial ? 'bg-emerald-50/30' : 'bg-[#f8f9fa]'}`}>
+        <div className={`relative py-20 overflow-hidden transition-colors duration-700 ${themeBg}`}>
             {/* Dynamic Backgrounds */}
             <div className="absolute inset-0 z-0">
                 <img
                     src="/bandung.png"
                     alt="Background"
-                    className={`w-full h-full object-cover opacity-10 grayscale contrast-125 transition-all duration-700 ${isSpecial ? 'sepia-[.2] hue-rotate-[90deg]' : ''}`}
+                    className={`w-full h-full object-cover opacity-10 grayscale contrast-125 transition-all duration-700 ${isSpecial ? 'sepia-[.2] hue-rotate-[90deg]' : ''} ${isWarlok ? 'sepia-[.3] hue-rotate-[240deg]' : ''}`}
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-white via-white/80 to-transparent" />
             </div>
 
             {/* Decor Shapes */}
-            <div className={`absolute top-0 right-0 w-[40%] h-full bg-gradient-to-l to-transparent -skew-x-[20deg] translate-x-[20%] pointer-events-none transition-colors duration-700 ${isSpecial ? 'from-emerald-100/50' : 'from-blue-50/80'}`} />
+            <div className={`absolute top-0 right-0 w-[40%] h-full bg-gradient-to-l to-transparent -skew-x-[20deg] translate-x-[20%] pointer-events-none transition-colors duration-700 ${isSpecial ? 'from-emerald-100/50' : isWarlok ? 'from-violet-50/80' : 'from-blue-50/80'}`} />
 
             <div className="relative z-10 container mx-auto px-4">
 
@@ -58,7 +86,7 @@ export default function Catalog({ onSelectBike }) {
                     </h2>
 
                     {/* Mode Toggle Switch (Only show if Configured & NOT forced special) */}
-                    {SHOW_SEASONAL_TOGGLE && !FORCE_SPECIAL_MODE && (
+                    {!FORCE_SPECIAL_MODE && (
                         <div className="flex justify-center mt-6 mb-8">
                             <div className="bg-white p-1.5 rounded-full shadow-lg border border-gray-200 flex relative">
                                 {/* Animated Background Pill */}
@@ -67,24 +95,39 @@ export default function Catalog({ onSelectBike }) {
                                     layoutId="modePill"
                                     initial={false}
                                     animate={{
-                                        left: isSpecial ? '50%' : '1.5%',
-                                        width: '48%'
+                                        left: isSpecial
+                                            ? (SHOW_SEASONAL_TOGGLE ? '66.5%' : '50%')
+                                            : isWarlok
+                                                ? (SHOW_SEASONAL_TOGGLE ? '34%' : '50.5%')
+                                                : '1.5%',
+                                        width: SHOW_SEASONAL_TOGGLE ? '32%' : '48%'
                                     }}
                                     transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+                                    style={{
+                                        backgroundColor: isSpecial ? '#059669' : isWarlok ? '#7c3aed' : '#004aad'
+                                    }}
                                 />
 
                                 <button
                                     onClick={() => setPriceMode('regular')}
-                                    className={`relative z-10 px-6 py-2 rounded-full font-bold text-sm md:text-base transition-colors duration-300 w-32 ${!isSpecial ? 'text-white' : 'text-gray-500 hover:text-gray-900'}`}
+                                    className={`relative z-10 px-4 md:px-6 py-2 rounded-full font-bold text-xs md:text-sm transition-colors duration-300 flex-1 ${isRegular ? 'text-white' : 'text-gray-500 hover:text-gray-900'}`}
                                 >
                                     HARGA BIASA
                                 </button>
                                 <button
-                                    onClick={() => setPriceMode('special')}
-                                    className={`relative z-10 px-6 py-2 rounded-full font-bold text-sm md:text-base transition-colors duration-300 w-32 ${isSpecial ? 'text-white' : 'text-gray-500 hover:text-gray-900'}`}
+                                    onClick={() => setPriceMode('warlok')}
+                                    className={`relative z-10 px-4 md:px-6 py-2 rounded-full font-bold text-xs md:text-sm transition-colors duration-300 flex-1 ${isWarlok ? 'text-white' : 'text-gray-500 hover:text-gray-900'}`}
                                 >
-                                    🕌 IDUL FITRI
+                                    WARLOK
                                 </button>
+                                {SHOW_SEASONAL_TOGGLE && (
+                                    <button
+                                        onClick={() => setPriceMode('special')}
+                                        className={`relative z-10 px-4 md:px-6 py-2 rounded-full font-bold text-xs md:text-sm transition-colors duration-300 flex-1 ${isSpecial ? 'text-white' : 'text-gray-500 hover:text-gray-900'}`}
+                                    >
+                                        🕌 IDUL FITRI
+                                    </button>
+                                )}
                             </div>
                         </div>
                     )}
@@ -108,9 +151,9 @@ export default function Catalog({ onSelectBike }) {
                                 exit={{ opacity: 0, y: -10 }}
                                 className="max-w-3xl mx-auto bg-emerald-100 border border-emerald-200 text-emerald-800 p-4 rounded-xl shadow-inner mb-8"
                             >
-                                <h3 className="font-black text-lg mb-1">🕌 PENYESUAIAN TARIF IDUL FITRI 🕌</h3>
+                                <h3 className="font-black text-lg mb-1">🕌 PENYESUAIAN TARIF IDUL FITRI 1447 H 🕌</h3>
                                 <p className="text-sm font-medium">
-                                    Masa Berlaku: <strong>H-7 s/d H+7 Lebaran</strong>* <br />
+                                    Masa Berlaku: <strong>16 - 26 MARET 2026</strong>* <br />
                                     <span className="text-xs opacity-75">*Dapat berubah sewaktu-waktu.</span>
                                 </p>
                             </motion.div>
@@ -122,14 +165,18 @@ export default function Catalog({ onSelectBike }) {
                                 exit={{ opacity: 0, y: -10 }}
                                 className="text-gray-500 max-w-2xl mx-auto text-lg font-medium mb-8"
                             >
-                                Unit terawat, performa maksimal. Siap temani keliling Bandung!
+                                {isWarlok ? (
+                                    <span>Harga khusus untuk <strong>Warga Lokal & Langganan</strong>! 🤙</span>
+                                ) : (
+                                    <span>Unit terawat, performa maksimal. Siap temani keliling Bandung!</span>
+                                )}
                             </motion.div>
                         )}
                     </AnimatePresence>
                 </div>
 
                 {/* Regular Categories Tabs (Only show if Regular Mode) */}
-                {!isSpecial && (
+                {isRegular && (
                     <div className="flex flex-wrap justify-center gap-2 md:gap-3 mb-12">
                         {categories.map((cat) => (
                             <button
@@ -162,7 +209,7 @@ export default function Catalog({ onSelectBike }) {
                             >
                                 {/* Diagonal Cut Image Container */}
                                 <div className="h-64 bg-gray-100 relative overflow-hidden">
-                                    <div className={`absolute inset-0 transition-colors z-10 ${isSpecial ? 'bg-emerald-600/5' : 'bg-[#004aad]/5'}`} />
+                                    <div className={`absolute inset-0 transition-colors z-10 ${themeOverlay}`} />
                                     <img
                                         src={bike.image}
                                         alt={bike.name}
@@ -170,7 +217,7 @@ export default function Catalog({ onSelectBike }) {
                                     />
 
                                     {/* Sharp Badge */}
-                                    <div className={`absolute bottom-0 left-0 px-6 py-2 rounded-tr-3xl z-20 shadow-lg ${isSpecial ? 'bg-emerald-600' : 'bg-[#004aad]'} text-white`}>
+                                    <div className={`absolute bottom-0 left-0 px-6 py-2 rounded-tr-3xl z-20 shadow-lg ${isRegular ? 'bg-[#004aad]' : ''} text-white`} style={{ backgroundColor: isRegular ? '' : themeColor }}>
                                         <h3 className="text-lg font-black italic tracking-wider">{bike.name}</h3>
                                     </div>
                                 </div>
@@ -190,7 +237,7 @@ export default function Catalog({ onSelectBike }) {
 
                                     {/* Features */}
                                     <div className="flex flex-wrap gap-2 mb-6">
-                                        {bike.features.length > 0 ? (
+                                        {bike.features?.length > 0 ? (
                                             bike.features.map((feat, idx) => (
                                                 <span key={idx} className={`text-[10px] uppercase tracking-wider font-bold px-3 py-1 rounded-full border flex items-center gap-1 ${isSpecial ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-blue-50 text-blue-700 border-blue-100'}`}>
                                                     <Check size={10} /> {feat}
