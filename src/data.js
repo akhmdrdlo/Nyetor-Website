@@ -13,7 +13,7 @@ export const catalogData = {
             id: "mio_m3",
             name: "YAMAHA MIO M3",
             image: "/mio.png",
-            prices: { 6: 35000, 12: 45000, 24: 65000 },
+            prices: { 6: 35000, 12: 45000, 24: 70000 },
             features: ["Include Sarung Tangan"]
         },
         {
@@ -27,14 +27,14 @@ export const catalogData = {
             id: "vario_kzr",
             name: "HONDA VARIO KZR",
             image: "/vario_kzr.png",
-            prices: { 3: 30000, 6: 35000, 12: 55000, 24: 85000 },
+            prices: { 3: 35000, 6: 40000, 12: 60000, 24: 95000 },
             features: []
         },
         {
             id: "beat_pop",
             name: "HONDA BEAT POP",
             image: "/beat_pop.png",
-            prices: { 3: 35000, 6: 40000, 12: 60000, 24: 95000 },
+            prices: { 3: 30000, 6: 35000, 12: 55000, 24: 85000 },
             features: ["Include Sarung Tangan"]
         }
     ],
@@ -101,23 +101,23 @@ export const catalogData = {
             id: "vario_160_keyless",
             name: "VARIO 160 KEYLESS",
             image: "/vario160.png",
-            prices: { 3: 55000, 6: 60000, 12: 80000, 24: 130000 },
+            prices: { 3: 55000, 6: 60000, 12: 85000, 24: 135000 },
             features: ["Include Sarung Tangan"]
         },
         {
             id: "fazzio_keyless",
             name: "YAMAHA FAZZIO KEYLESS",
             image: "/fazzio.png",
-            prices: { 3: 50000, 6: 60000, 12: 80000, 24: 120000 },
+            prices: { 3: 55000, 6: 60000, 12: 80000, 24: 130000 },
             features: ["Include Sarung Tangan"]
         }
     ],
     gold: [
         {
             id: "lexi_abs",
-            name: "LEXI ABS 155CC KEYLESS",
+            name: "LEXI LX 155 KEYLESS",
             image: "/yamahalexi.png",
-            prices: { 3: 55000, 6: 60000, 12: 85000, 24: 135000 },
+            prices: { 3: 55000, 6: 60000, 12: 90000, 24: 145000 },
             features: ["Include Sarung Tangan"]
         },
         {
@@ -131,7 +131,7 @@ export const catalogData = {
             id: "pcx",
             name: "HONDA PCX",
             image: "/pcxnew.png",
-            prices: { 3: 55000, 6: 60000, 12: 90000, 24: 145000 },
+            prices: { 3: 55000, 6: 60000, 12: 85000, 24: 135000 },
             features: []
         },
         {
@@ -174,14 +174,6 @@ export const catalogData = {
     ],
     // WARLOK SECTION (Restricted List)
     warlok: [
-        // Unit Bebek
-        {
-            id: "jupiter_z_w",
-            name: "YAMAHA JUPITER Z",
-            image: "/jupiterz.png",
-            prices: { 6: 55000, 12: 70000, 24: 90000 },
-            features: []
-        },
         // Super Ekonomis
         {
             id: "mio_m3_w",
@@ -196,6 +188,13 @@ export const catalogData = {
             image: "/beat_pop.png",
             prices: { 6: 75000, 12: 90000, 24: 110000 },
             features: ["Include Sarung Tangan"]
+        },
+        {
+            id: "vario_kzr_w",
+            name: "HONDA VARIO KZR",
+            image: "/vario_kzr.png",
+            prices: { 6: 75000, 12: 95000, 24: 115000 },
+            features: []
         },
         // Ekonomis
         {
@@ -224,6 +223,13 @@ export const catalogData = {
             id: "gear_matic_w",
             name: "YAMAHA GEAR MATIC",
             image: "/gear_matic.png",
+            prices: { 6: 115000, 12: 130000, 24: 150000 },
+            features: ["Include Sarung Tangan"]
+        },
+        {
+            id: "fazzio_keyless_w",
+            name: "YAMAHA FAZZIO KEYLESS",
+            image: "/fazzio.png",
             prices: { 6: 115000, 12: 130000, 24: 150000 },
             features: ["Include Sarung Tangan"]
         },

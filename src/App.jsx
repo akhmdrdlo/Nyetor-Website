@@ -7,6 +7,7 @@ import BookingSuccess from './components/BookingSuccess';
 import About from './components/About';
 import Services from './components/Services';
 import TermsFAQ from './components/TermsFAQ';
+import CoverageArea from './components/CoverageArea';
 import Location from './components/Location';
 import Footer from './components/Footer';
 import './index.css';
@@ -111,6 +112,8 @@ function App() {
               <Catalog onSelectBike={handleSelectBike} />
             </div>
           </div>
+
+          <CoverageArea />
 
           <Location />
 
