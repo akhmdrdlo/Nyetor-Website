@@ -14,7 +14,7 @@ const categories = [
 
 // CONFIGURATION
 const FORCE_SPECIAL_MODE = false; // Set to TRUE to disable Regular mode entirely (e.g. Peak Season)
-const SHOW_SEASONAL_TOGGLE = true; // Set to TRUE to show the Season Toggle Button
+const SHOW_SEASONAL_TOGGLE = false; // Set to TRUE to show the Season Toggle Button
 
 export default function Catalog({ onSelectBike }) {
     const [priceMode, setPriceMode] = useState(FORCE_SPECIAL_MODE ? 'special' : 'regular'); // 'regular' | 'special'

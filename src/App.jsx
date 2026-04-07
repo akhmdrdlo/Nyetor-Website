@@ -10,6 +10,8 @@ import TermsFAQ from './components/TermsFAQ';
 import CoverageArea from './components/CoverageArea';
 import Location from './components/Location';
 import Footer from './components/Footer';
+import InstagramBadge from './components/InstagramBadge';
+import PromoManager from './components/PromoManager';
 import './index.css';
 
 // Lib
@@ -168,6 +170,10 @@ function App() {
       <div style={{ position: 'absolute', left: '-9999px', top: 0 }}>
         <Invoice ref={invoiceRef} data={invoiceData} />
       </div>
+
+      {/* Global Components */}
+      <InstagramBadge />
+      <PromoManager />
 
     </div>
   );
