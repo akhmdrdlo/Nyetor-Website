@@ -1,6 +1,18 @@
+import { useEffect, useState } from 'react';
 import { Instagram, MessageCircle, MapPin } from 'lucide-react';
 
 export default function Footer() {
+    const [currentTime, setCurrentTime] = useState(new Date().getFullYear().toString());
+
+    useEffect(() => {
+        const formatter = new Intl.DateTimeFormat('id-ID', {
+            timeZone: 'Asia/Jakarta',
+            month: 'long',
+            year: 'numeric'
+        });
+        setCurrentTime(formatter.format(new Date()));
+    }, []);
+
     return (
         <footer className="bg-[#0a0a0a] text-white pt-20 pb-10 border-t border-gray-800">
             <div className="container mx-auto px-4">
@@ -53,7 +65,7 @@ export default function Footer() {
                 </div>
 
                 <div className="border-t border-gray-800 pt-8 text-center text-gray-500 text-sm">
-                    <p>&copy; {new Date().getFullYear()} Nyetor.id. All rights reserved.</p>
+                    <p>&copy; {currentTime} Nyetor.id. All rights reserved.</p>
                 </div>
             </div>
         </footer>

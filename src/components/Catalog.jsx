@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { catalogData } from '../data';
-import { Check } from 'lucide-react';
+import { catalogData, SEASONAL_CONFIG } from '../data';
+import { Check, AlertTriangle } from 'lucide-react';
 
 const categories = [
     { id: 'super_ekonomis', label: 'Super Ekonomis', color: 'bg-blue-600' },
@@ -12,17 +12,28 @@ const categories = [
     { id: 'accessories', label: 'Aksesoris', color: 'bg-red-600' },
 ];
 
-// CONFIGURATION
-const FORCE_SPECIAL_MODE = false; // Set to TRUE to disable Regular mode entirely (e.g. Peak Season)
-const SHOW_SEASONAL_TOGGLE = false; // Set to TRUE to show the Season Toggle Button
-
 export default function Catalog({ onSelectBike }) {
-    const [priceMode, setPriceMode] = useState(FORCE_SPECIAL_MODE ? 'special' : 'regular'); // 'regular' | 'special'
+    const [priceMode, setPriceMode] = useState('regular'); // 'regular' | 'warlok'
     const [activeTab, setActiveTab] = useState('super_ekonomis');
+    const [isSeasonalActive, setIsSeasonalActive] = useState(false);
 
-    const isSpecial = priceMode === 'special';
-    const isWarlok = priceMode === 'warlok';
-    const isRegular = priceMode === 'regular';
+    useEffect(() => {
+        if (!SEASONAL_CONFIG.isAutoEnabled) return;
+
+        // Mendapatkan timestamp saat ini secara universal (browser)
+        const currentTimestamp = Date.now();
+        const startTimestamp = new Date(SEASONAL_CONFIG.startDate).getTime();
+        const endTimestamp = new Date(SEASONAL_CONFIG.endDate).getTime();
+
+        if (currentTimestamp >= startTimestamp && currentTimestamp <= endTimestamp) {
+            setIsSeasonalActive(true);
+        }
+    }, []);
+
+    // Override mode states
+    const isSpecial = isSeasonalActive; // Force special mode if date is active
+    const isWarlok = priceMode === 'warlok' && !isSeasonalActive;
+    const isRegular = priceMode === 'regular' && !isSeasonalActive;
 
     // THEME LOGIC
     let themeColor = '#004aad'; // Blue (Regular)
@@ -55,7 +66,7 @@ export default function Catalog({ onSelectBike }) {
 
     // Data Source Logic
     let currentList = catalogData[activeTab];
-    if (isSpecial) currentList = catalogData.idul_fitri;
+    if (isSpecial) currentList = catalogData.seasonal;
     if (isWarlok) currentList = catalogData.warlok;
 
     return (
@@ -86,25 +97,21 @@ export default function Catalog({ onSelectBike }) {
                     </h2>
 
                     {/* Mode Toggle Switch (Only show if Configured & NOT forced special) */}
-                    {!FORCE_SPECIAL_MODE && (
+                    {!isSeasonalActive && (
                         <div className="flex justify-center mt-6 mb-8">
                             <div className="bg-white p-1.5 rounded-full shadow-lg border border-gray-200 flex relative">
                                 {/* Animated Background Pill */}
                                 <motion.div
-                                    className={`absolute top-1.5 bottom-1.5 rounded-full shadow-md ${isSpecial ? 'bg-emerald-600' : 'bg-[#004aad]'}`}
+                                    className={`absolute top-1.5 bottom-1.5 rounded-full shadow-md bg-[#004aad]`}
                                     layoutId="modePill"
                                     initial={false}
                                     animate={{
-                                        left: isSpecial
-                                            ? (SHOW_SEASONAL_TOGGLE ? '66.5%' : '50%')
-                                            : isWarlok
-                                                ? (SHOW_SEASONAL_TOGGLE ? '34%' : '50.5%')
-                                                : '1.5%',
-                                        width: SHOW_SEASONAL_TOGGLE ? '32%' : '48%'
+                                        left: isWarlok ? '50.5%' : '1.5%',
+                                        width: '48%'
                                     }}
                                     transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
                                     style={{
-                                        backgroundColor: isSpecial ? '#059669' : isWarlok ? '#7c3aed' : '#004aad'
+                                        backgroundColor: isWarlok ? '#7c3aed' : '#004aad'
                                     }}
                                 />
 
@@ -120,23 +127,16 @@ export default function Catalog({ onSelectBike }) {
                                 >
                                     WARLOK
                                 </button>
-                                {SHOW_SEASONAL_TOGGLE && (
-                                    <button
-                                        onClick={() => setPriceMode('special')}
-                                        className={`relative z-10 px-4 md:px-6 py-2 rounded-full font-bold text-xs md:text-sm transition-colors duration-300 flex-1 ${isSpecial ? 'text-white' : 'text-gray-500 hover:text-gray-900'}`}
-                                    >
-                                        🕌 IDUL FITRI
-                                    </button>
-                                )}
                             </div>
                         </div>
                     )}
 
                     {/* If Forced Special, show a static Title/Badge indicating Special Event */}
-                    {FORCE_SPECIAL_MODE && (
+                    {isSeasonalActive && (
                         <div className="flex justify-center mt-4 mb-8">
                             <div className="bg-emerald-600 text-white px-6 py-2 rounded-full font-bold text-sm md:text-base shadow-lg hover:scale-105 transition-transform flex items-center gap-2">
-                                <span>🕌 SPECIAL EVENT PRICING</span>
+                                <AlertTriangle size={18} />
+                                <span>{SEASONAL_CONFIG.badgeText} ACTIVATED</span>
                             </div>
                         </div>
                     )}
@@ -151,10 +151,9 @@ export default function Catalog({ onSelectBike }) {
                                 exit={{ opacity: 0, y: -10 }}
                                 className="max-w-3xl mx-auto bg-emerald-100 border border-emerald-200 text-emerald-800 p-4 rounded-xl shadow-inner mb-8"
                             >
-                                <h3 className="font-black text-lg mb-1">🕌 PENYESUAIAN TARIF IDUL FITRI 1447 H 🕌</h3>
+                                <h3 className="font-black text-lg mb-1">{SEASONAL_CONFIG.eventName}</h3>
                                 <p className="text-sm font-medium">
-                                    Masa Berlaku: <strong>16 - 26 MARET 2026</strong>* <br />
-                                    <span className="text-xs opacity-75">*Dapat berubah sewaktu-waktu.</span>
+                                    Masa Berlaku Promo: <strong>{new Date(SEASONAL_CONFIG.startDate).toLocaleDateString("id-ID", { day: 'numeric', month: 'long', year: 'numeric' })} - {new Date(SEASONAL_CONFIG.endDate).toLocaleDateString("id-ID", { day: 'numeric', month: 'long', year: 'numeric' })}</strong>
                                 </p>
                             </motion.div>
                         ) : (
