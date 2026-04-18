@@ -2,7 +2,7 @@ export const SEASONAL_CONFIG = {
     isAutoEnabled: true,
     eventName: 'HARGA SPESIAL "MONTH OF HOLIDAY"',
     badgeText: 'HOLIDAY SEASON 🔥',
-    startDate: '2026-05-01T00:00:00+07:00', // 1 Mei
+    startDate: '2026-04-01T00:00:00+07:00', // 1 Mei
     endDate: '2026-06-01T23:59:59+07:00'   // 1 Juni End of Day
 };
 
