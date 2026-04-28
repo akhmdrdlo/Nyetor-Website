@@ -15,9 +15,10 @@ let DefaultIcon = L.icon({
 
 L.Marker.prototype.options.icon = DefaultIcon;
 
-// Coordinate Garasi Nyetor (Based on Address: Terusan Gang Kujang, Cipadung)
-// Approx Coords for Cipadung, Cibiru area: -6.930130, 107.715293
-const position = [-6.930130, 107.715293];
+// Coordinates
+const MARKAS_1 = [-6.930130, 107.715293]; // Cipadung
+const MARKAS_2 = [-6.945500, 107.727500]; // Bumi Harapan Cimekar
+const MAP_CENTER = [-6.937815, 107.721396]; // Center between the two
 
 export default function Location() {
     return (
@@ -31,28 +32,42 @@ export default function Location() {
                 </div>
 
                 <div className="rounded-3xl overflow-hidden shadow-2xl border-4 border-white h-[400px] md:h-[500px] relative z-0">
-                    <MapContainer center={position} zoom={16} scrollWheelZoom={false} style={{ height: '100%', width: '100%' }}>
+                    <MapContainer center={MAP_CENTER} zoom={14} scrollWheelZoom={false} style={{ height: '100%', width: '100%' }}>
                         <TileLayer
                             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
                             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                         />
-                        <Marker position={position}>
+                        <Marker position={MARKAS_1}>
                             <Popup>
-                                <strong>Garasi Nyetor.id</strong> <br />
+                                <strong>Markas 1: Pusat</strong> <br />
                                 Terusan Gang Kujang, Cipadung.
+                            </Popup>
+                        </Marker>
+                        <Marker position={MARKAS_2}>
+                            <Popup>
+                                <strong>Markas 2: Cimekar</strong> <br />
+                                Bumi Harapan Blok CC9 No. 37.
                             </Popup>
                         </Marker>
                     </MapContainer>
                 </div>
 
-                <div className="flex justify-center mt-8">
+                <div className="flex flex-col md:flex-row justify-center mt-8 gap-4">
                     <a
                         href="https://www.google.com/maps/search/?api=1&query=-6.930130,107.715293"
                         target="_blank"
                         rel="noreferrer"
-                        className="px-8 py-3 bg-[#004aad] text-white rounded-full font-bold shadow-lg hover:bg-blue-800 transition-transform hover:scale-105 flex items-center gap-2"
+                        className="px-8 py-3 bg-[#0a0a0a] text-white rounded-full font-bold shadow-lg hover:bg-gray-800 transition-transform hover:scale-105 flex items-center justify-center gap-2"
                     >
-                        Buka di Google Maps
+                        Peta Markas 1 (Cipadung)
+                    </a>
+                    <a
+                        href="https://maps.app.goo.gl/TF7GWxfpSB6Tnwas7"
+                        target="_blank"
+                        rel="noreferrer"
+                        className="px-8 py-3 bg-[#004aad] text-white rounded-full font-bold shadow-lg hover:bg-blue-800 transition-transform hover:scale-105 flex items-center justify-center gap-2"
+                    >
+                        Peta Markas 2 (Cimekar)
                     </a>
                 </div>
             </div>

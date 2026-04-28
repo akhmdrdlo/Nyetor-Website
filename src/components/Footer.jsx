@@ -54,7 +54,13 @@ export default function Footer() {
                         <ul className="space-y-4 text-gray-400">
                             <li className="flex items-start gap-3">
                                 <MapPin className="shrink-0 mt-1" size={18} />
-                                <span>Terusan Gang Kujang, Kp Jl. Desa Cipadung, Cipadung, Kec. Cibiru, Kota Bandung, Jawa Barat 40614</span>
+                                <div>
+                                    <span className="block font-bold">Markas 1: Pusat</span>
+                                    <span className="block text-sm mb-2">Terusan Gang Kujang, Kp Jl. Desa Cipadung, Cibiru, Kota Bandung 40614</span>
+                                    
+                                    <span className="block font-bold">Markas 2: Cimekar</span>
+                                    <span className="block text-sm">Bumi Harapan Blok CC9 No. 37, Cimekar / Cibiru Hilir, Kec. Cileunyi 40626</span>
+                                </div>
                             </li>
                             <li className="flex items-center gap-3">
                                 <MessageCircle className="shrink-0" size={18} />

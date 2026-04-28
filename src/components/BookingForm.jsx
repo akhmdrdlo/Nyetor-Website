@@ -14,6 +14,7 @@ export default function BookingForm({ selectedBike, onCancel, onSubmit }) {
         titikAntarDetail: '', // Provide detailed desc if needed
         titikJemput: '',
         deliveryMethod: 'pickup', // pickup | delivery
+        pickupBranch: 'Markas 1 (Pusat Cipadung)',
         selectedZonePrice: 0
     });
 
@@ -475,14 +476,34 @@ export default function BookingForm({ selectedBike, onCancel, onSubmit }) {
                             </div>
                         )}
 
+                        {/* Branch Selector (Only if Pickup) */}
+                        {formData.deliveryMethod === 'pickup' && (
+                            <div className="animate-fade-in-down mb-2">
+                                <label className="block text-gray-600 text-xs font-bold uppercase mb-1">
+                                    Pilih Garasi Pengambilan & Pengembalian
+                                </label>
+                                <select
+                                    required={formData.deliveryMethod === 'pickup'}
+                                    className="input-field border-blue-200 bg-blue-50/30 font-bold text-[#004aad]"
+                                    onChange={(e) => {
+                                        setFormData({ ...formData, pickupBranch: e.target.value });
+                                    }}
+                                    value={formData.pickupBranch || 'Markas 1 (Pusat Cipadung)'}
+                                >
+                                    <option value="Markas 1 (Pusat Cipadung)">Markas 1 - Cipadung (Pusat)</option>
+                                    <option value="Markas 2 (Garasi Cimekar)">Markas 2 - Cimekar (Bumi Harapan)</option>
+                                </select>
+                            </div>
+                        )}
+
                         <div>
                             <label className="block text-gray-600 text-xs font-bold uppercase mb-1">Alamat Lengkap (Titik Antar)</label>
                             <input
                                 required
                                 type="text"
-                                className={`input-field ${formData.deliveryMethod === 'pickup' ? 'bg-gray-200 cursor-not-allowed text-gray-400' : ''}`}
-                                placeholder={formData.deliveryMethod === 'pickup' ? 'Ambil Sendiri di Garasi (Cipadung)' : 'Alamat lengkap / Shareloc...'}
-                                value={formData.deliveryMethod === 'pickup' ? 'AMBIL SENDIRI DI GARASI' : formData.titikAntar}
+                                className={`input-field ${formData.deliveryMethod === 'pickup' ? 'bg-gray-200 cursor-not-allowed text-gray-400 font-semibold' : ''}`}
+                                placeholder={formData.deliveryMethod === 'pickup' ? `Ambil Sendiri di ${formData.pickupBranch}` : 'Alamat lengkap / Shareloc...'}
+                                value={formData.deliveryMethod === 'pickup' ? `AMBIL DI ${formData.pickupBranch.toUpperCase()}` : formData.titikAntar}
                                 onChange={e => {
                                     if (formData.deliveryMethod !== 'pickup') {
                                         setFormData({ ...formData, titikAntar: e.target.value });
@@ -496,8 +517,8 @@ export default function BookingForm({ selectedBike, onCancel, onSubmit }) {
                             <label className="block text-gray-600 text-xs font-bold uppercase mb-1">Titik Jemput (Pengembalian)</label>
                             <input
                                 required type="text" className="input-field"
-                                placeholder={formData.deliveryMethod === 'pickup' ? 'Dikembalikan ke Garasi...' : 'Alamat lengkap...'}
-                                value={formData.deliveryMethod === 'pickup' ? 'KEMBALI KE GARASI' : formData.titikJemput}
+                                placeholder={formData.deliveryMethod === 'pickup' ? `Kembalikan ke ${formData.pickupBranch}` : 'Alamat lengkap...'}
+                                value={formData.deliveryMethod === 'pickup' ? `KEMBALI KE ${formData.pickupBranch.toUpperCase()}` : formData.titikJemput}
                                 onChange={e => {
                                     // Allow edit if they start with pickup but maybe return elsewhere? 
                                     // Actually usually pickup means return to garage too for simple logic, but let's allow flexibility or lock it?

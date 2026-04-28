@@ -13,7 +13,7 @@ const categories = [
 ];
 
 export default function Catalog({ onSelectBike }) {
-    const [priceMode, setPriceMode] = useState('regular'); // 'regular' | 'warlok'
+    const [priceMode, setPriceMode] = useState('regular'); // 'regular' | 'warlok' | 'seasonal'
     const [activeTab, setActiveTab] = useState('super_ekonomis');
     const [isSeasonalActive, setIsSeasonalActive] = useState(false);
 
@@ -27,13 +27,14 @@ export default function Catalog({ onSelectBike }) {
 
         if (currentTimestamp >= startTimestamp && currentTimestamp <= endTimestamp) {
             setIsSeasonalActive(true);
+            setPriceMode('seasonal'); // Default to seasonal when active
         }
     }, []);
 
-    // Override mode states
-    const isSpecial = isSeasonalActive; // Force special mode if date is active
-    const isWarlok = priceMode === 'warlok' && !isSeasonalActive;
-    const isRegular = priceMode === 'regular' && !isSeasonalActive;
+    // Override mode states dependent on user toggle now
+    const isSpecial = priceMode === 'seasonal';
+    const isWarlok = priceMode === 'warlok';
+    const isRegular = priceMode === 'regular';
 
     // THEME LOGIC
     let themeColor = '#004aad'; // Blue (Regular)
@@ -96,50 +97,50 @@ export default function Catalog({ onSelectBike }) {
                         PILIH UNIT <span className={`text-transparent bg-clip-text bg-gradient-to-r ${themeGradient}`}>MOTOR</span>
                     </h2>
 
-                    {/* Mode Toggle Switch (Only show if Configured & NOT forced special) */}
-                    {!isSeasonalActive && (
-                        <div className="flex justify-center mt-6 mb-8">
-                            <div className="bg-white p-1.5 rounded-full shadow-lg border border-gray-200 flex relative">
-                                {/* Animated Background Pill */}
-                                <motion.div
-                                    className={`absolute top-1.5 bottom-1.5 rounded-full shadow-md bg-[#004aad]`}
-                                    layoutId="modePill"
-                                    initial={false}
-                                    animate={{
-                                        left: isWarlok ? '50.5%' : '1.5%',
-                                        width: '48%'
-                                    }}
-                                    transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
-                                    style={{
-                                        backgroundColor: isWarlok ? '#7c3aed' : '#004aad'
-                                    }}
-                                />
+                    {/* Mode Toggle Switch */}
+                    <div className="flex justify-center mt-6 mb-8">
+                        <div className="bg-white p-1.5 rounded-full shadow-lg border border-gray-200 flex relative">
+                            {/* Animated Background Pill */}
+                            <motion.div
+                                className={`absolute top-1.5 bottom-1.5 rounded-full shadow-md`}
+                                layoutId="modePill"
+                                initial={false}
+                                animate={{
+                                    left: isSpecial 
+                                        ? '66.5%' 
+                                        : isWarlok 
+                                            ? (isSeasonalActive ? '34%' : '50.5%') 
+                                            : '1.5%',
+                                    width: isSeasonalActive ? '32%' : '48%'
+                                }}
+                                transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+                                style={{
+                                    backgroundColor: isSpecial ? '#059669' : isWarlok ? '#7c3aed' : '#004aad'
+                                }}
+                            />
 
+                            <button
+                                onClick={() => setPriceMode('regular')}
+                                className={`relative z-10 px-4 md:px-6 py-2 rounded-full font-bold text-xs md:text-sm transition-colors duration-300 flex-1 ${isRegular ? 'text-white' : 'text-gray-500 hover:text-gray-900'}`}
+                            >
+                                HARGA BIASA
+                            </button>
+                            <button
+                                onClick={() => setPriceMode('warlok')}
+                                className={`relative z-10 px-4 md:px-6 py-2 rounded-full font-bold text-xs md:text-sm transition-colors duration-300 flex-1 ${isWarlok ? 'text-white' : 'text-gray-500 hover:text-gray-900'}`}
+                            >
+                                WARLOK
+                            </button>
+                            {isSeasonalActive && (
                                 <button
-                                    onClick={() => setPriceMode('regular')}
-                                    className={`relative z-10 px-4 md:px-6 py-2 rounded-full font-bold text-xs md:text-sm transition-colors duration-300 flex-1 ${isRegular ? 'text-white' : 'text-gray-500 hover:text-gray-900'}`}
+                                    onClick={() => setPriceMode('seasonal')}
+                                    className={`relative z-10 px-4 md:px-6 py-2 rounded-full font-bold text-xs md:text-sm transition-colors duration-300 flex-1 ${isSpecial ? 'text-white' : 'text-gray-500 hover:text-gray-900'}`}
                                 >
-                                    HARGA BIASA
+                                    {SEASONAL_CONFIG.badgeText.replace(' 🔥', '')}
                                 </button>
-                                <button
-                                    onClick={() => setPriceMode('warlok')}
-                                    className={`relative z-10 px-4 md:px-6 py-2 rounded-full font-bold text-xs md:text-sm transition-colors duration-300 flex-1 ${isWarlok ? 'text-white' : 'text-gray-500 hover:text-gray-900'}`}
-                                >
-                                    WARLOK
-                                </button>
-                            </div>
+                            )}
                         </div>
-                    )}
-
-                    {/* If Forced Special, show a static Title/Badge indicating Special Event */}
-                    {isSeasonalActive && (
-                        <div className="flex justify-center mt-4 mb-8">
-                            <div className="bg-emerald-600 text-white px-6 py-2 rounded-full font-bold text-sm md:text-base shadow-lg hover:scale-105 transition-transform flex items-center gap-2">
-                                <AlertTriangle size={18} />
-                                <span>{SEASONAL_CONFIG.badgeText} ACTIVATED</span>
-                            </div>
-                        </div>
-                    )}
+                    </div>
 
                     {/* Conditional Description */}
                     <AnimatePresence mode="wait">
