@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { catalogData, SEASONAL_CONFIG } from '../data';
-import { Check, AlertTriangle } from 'lucide-react';
+import { Check, AlertTriangle, Camera } from 'lucide-react';
 
 const categories = [
     { id: 'super_ekonomis', label: 'Super Ekonomis', color: 'bg-blue-600' },
@@ -210,15 +210,24 @@ export default function Catalog({ onSelectBike }) {
                                 {/* Diagonal Cut Image Container */}
                                 <div className="h-64 bg-gray-100 relative overflow-hidden">
                                     <div className={`absolute inset-0 transition-colors z-10 ${themeOverlay}`} />
-                                    <img
-                                        src={bike.image}
-                                        alt={bike.name}
-                                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
-                                    />
+                                    {bike.image ? (
+                                        <img
+                                            src={bike.image}
+                                            alt={bike.name}
+                                            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                                        />
+                                    ) : (
+                                        <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200 text-gray-400 select-none">
+                                            <Camera size={44} className="mb-2 stroke-1 text-gray-400 group-hover:scale-110 transition-transform duration-500" />
+                                            <span className="text-xs font-bold uppercase tracking-wider">Foto Belum Tersedia</span>
+                                        </div>
+                                    )}
 
                                     {/* Sharp Badge */}
                                     <div className={`absolute bottom-0 left-0 px-6 py-2 rounded-tr-3xl z-20 shadow-lg ${isRegular ? 'bg-[#004aad]' : ''} text-white`} style={{ backgroundColor: isRegular ? '' : themeColor }}>
-                                        <h3 className="text-lg font-black italic tracking-wider">{bike.name}</h3>
+                                        <h3 className={`text-lg font-black italic tracking-wider ${!bike.image ? 'underline decoration-2 decoration-white underline-offset-4' : ''}`}>
+                                            {bike.name}
+                                        </h3>
                                     </div>
                                 </div>
 

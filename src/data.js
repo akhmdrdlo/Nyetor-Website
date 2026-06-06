@@ -1,9 +1,9 @@
 export const SEASONAL_CONFIG = {
-    isAutoEnabled: true,
+    isAutoEnabled: false,
     eventName: 'IDUL ADHA SPESIAL',
     badgeText: 'IDUL ADHA 🔥',
     startDate: '2026-05-20T00:00:00+07:00', // Start now
-    endDate: '2026-06-30T23:59:59+07:00'   
+    endDate: '2026-06-30T23:59:59+07:00'
 };
 
 export const catalogData = {
@@ -18,18 +18,32 @@ export const catalogData = {
     ],
     super_ekonomis: [
         {
+            id: "beat_karbu",
+            name: "HONDA BEAT KARBU",
+            image: "/beatkarbu.png",
+            prices: { 6: 40000, 12: 50000, 24: 90000 },
+            features: ["Super Ekonomis"]
+        },
+        {
             id: "mio_m3",
             name: "YAMAHA MIO M3",
             image: "/mio.png",
-            prices: { 6: 40000, 12: 50000, 24: 85000 },
+            prices: { 6: 40000, 12: 55000, 24: 90000 },
             features: ["Include Sarung Tangan"]
         },
         {
-            id: "mio_z",
-            name: "YAMAHA MIO Z",
-            image: "/mioz.png",
-            prices: { 3: 30000, 6: 40000, 12: 55000, 24: 85000 },
-            features: ["Super Ekonomis"]
+            id: "fino",
+            name: "YAMAHA FINO",
+            image: "/FINO.png",
+            prices: { 6: 40000, 12: 55000, 24: 95000 },
+            features: []
+        },
+        {
+            id: "beat_pop",
+            name: "HONDA BEAT POP",
+            image: "/beat_pop.png",
+            prices: { 6: 45000, 12: 60000, 24: 95000 },
+            features: ["Include Sarung Tangan"]
         },
         {
             id: "vario_kzr",
@@ -37,13 +51,6 @@ export const catalogData = {
             image: "/vario_kzr.png",
             prices: { 6: 45000, 12: 65000, 24: 100000 },
             features: []
-        },
-        {
-            id: "beat_pop",
-            name: "HONDA BEAT POP",
-            image: "/beat_pop.png",
-            prices: { 6: 40000, 12: 60000, 24: 95000 },
-            features: ["Include Sarung Tangan"]
         }
     ],
     ekonomis: [
@@ -58,7 +65,14 @@ export const catalogData = {
             id: "genio",
             name: "HONDA GENIO 2022",
             image: "/genio2022.png",
-            prices: { 6: 50000, 12: 75000, 24: 110000 },
+            prices: { 6: 55000, 12: 75000, 24: 110000 },
+            features: ["Include Sarung Tangan"]
+        },
+        {
+            id: "beat_deluxe",
+            name: "HONDA BEAT DELUXE",
+            image: "/beat_deluxe.png",
+            prices: { 6: 55000, 12: 80000, 24: 115000 },
             features: ["Include Sarung Tangan"]
         },
         {
@@ -67,13 +81,6 @@ export const catalogData = {
             image: "/beat_street.png",
             prices: { 6: 55000, 12: 80000, 24: 115000 },
             features: []
-        },
-        {
-            id: "beat_deluxe",
-            name: "HONDA BEAT DELUXE",
-            image: "/beat_deluxe.png",
-            prices: { 6: 55000, 12: 80000, 24: 115000 },
-            features: ["Include Sarung Tangan"]
         },
         {
             id: "scoopy_2023",
@@ -88,29 +95,22 @@ export const catalogData = {
             id: "scoopy_keyless",
             name: "ALLNEW SCOOPY KEYLESS 2025",
             image: "/scoopy_keyless.png",
-            prices: { 6: 55000, 12: 85000, 24: 125000 },
+            prices: { 6: 60000, 12: 85000, 24: 125000 },
             features: []
         },
         {
             id: "gear_matic",
             name: "YAMAHA GEAR MATIC",
             image: "/gear_matic.png",
-            prices: { 6: 55000, 12: 85000, 24: 130000 },
+            prices: { 6: 60000, 12: 85000, 24: 130000 },
             features: ["Include Sarung Tangan"]
         },
         {
             id: "vario_led_old",
             name: "VARIO LED OLD",
             image: "/vario_ledOld.png",
-            prices: { 6: 60000, 12: 90000, 24: 135000 },
+            prices: { 6: 65000, 12: 90000, 24: 135000 },
             features: []
-        },
-        {
-            id: "vario_160_keyless",
-            name: "VARIO 160 KEYLESS",
-            image: "/vario160.png",
-            prices: { 6: 60000, 12: 90000, 24: 140000 },
-            features: ["Include Sarung Tangan"]
         },
         {
             id: "fazzio_keyless",
@@ -122,31 +122,38 @@ export const catalogData = {
     ],
     gold: [
         {
-            id: "lexi_abs",
-            name: "LEXI LX 155 KEYLESS",
-            image: "/yamahalexi.png",
-            prices: { 6: 65000, 12: 100000, 24: 155000 },
+            id: "vario_160_keyless",
+            name: "VARIO 160 KEYLESS",
+            image: "/vario160.png",
+            prices: { 6: 65000, 12: 90000, 24: 145000 },
             features: ["Include Sarung Tangan"]
         },
         {
             id: "nmax_old",
             name: "YAMAHA NMAX OLD 2019",
             image: "/nmax.png",
-            prices: { 6: 65000, 12: 95000, 24: 150000 },
+            prices: { 6: 70000, 12: 95000, 24: 145000 },
             features: []
         },
         {
-            id: "pcx",
-            name: "HONDA PCX",
-            image: "/pcxnew.png",
-            prices: { 6: 65000, 12: 95000, 24: 150000 },
+            id: "aerox",
+            name: "YAMAHA AEROX",
+            image: "/aerox.png",
+            prices: { 6: 70000, 12: 95000, 24: 150000 },
             features: []
+        },
+        {
+            id: "lexi_abs",
+            name: "LEXI LX 155 KEYLESS",
+            image: "/yamahalexi.png",
+            prices: { 6: 70000, 12: 105000, 24: 155000 },
+            features: ["Include Sarung Tangan"]
         },
         {
             id: "nmax_keyless",
-            name: "YAMAHA NMAX KEYLESS",
+            name: "YAMAHA NMAX KEYLESS 2022",
             image: "/nmax_keyless.png",
-            prices: { 6: 65000, 12: 100000, 24: 160000 },
+            prices: { 6: 70000, 12: 105000, 24: 160000 },
             features: []
         }
     ],
@@ -175,12 +182,11 @@ export const catalogData = {
         {
             id: "backpack",
             name: "SEWA BACKPACK",
-            image: "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?auto=format&fit=crop&q=80&w=400", // Keep Unsplash for Backpack as file not found
+            image: "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?auto=format&fit=crop&q=80&w=400",
             prices: { 12: 15000, 24: 20000 },
             features: ["Kapasitas Besar"]
         }
     ],
-    // WARLOK SECTION (Restricted List)
     warlok: [
         {
             id: "jupiter_z_w",
@@ -193,21 +199,21 @@ export const catalogData = {
             id: "mio_m3_w",
             name: "YAMAHA MIO M3",
             image: "/mio.png",
-            prices: { 12: 65000, 24: 100000 },
+            prices: { 12: 65000, 24: 110000 },
             features: ["Include Sarung Tangan"]
         },
         {
             id: "beat_pop_w",
             name: "HONDA BEAT POP",
             image: "/beat_pop.png",
-            prices: { 12: 75000, 24: 110000 },
+            prices: { 12: 75000, 24: 115000 },
             features: ["Include Sarung Tangan"]
         },
         {
             id: "vario_kzr_w",
             name: "HONDA VARIO KZR",
             image: "/vario_kzr.png",
-            prices: { 12: 80000, 24: 115000 },
+            prices: { 12: 80000, 24: 120000 },
             features: []
         },
         {
@@ -225,25 +231,11 @@ export const catalogData = {
             features: ["Include Sarung Tangan"]
         },
         {
-            id: "scoopy_2023_w",
-            name: "HONDA SCOOPY 2023",
-            image: "/scoopy2023.png",
-            prices: { 12: 95000, 24: 135000 },
-            features: ["Include Sarung Tangan"]
-        },
-        {
             id: "gear_matic_w",
             name: "YAMAHA GEAR MATIC",
             image: "/gear_matic.png",
             prices: { 12: 100000, 24: 145000 },
             features: ["Include Sarung Tangan"]
-        },
-        {
-            id: "vario_led_old_w",
-            name: "VARIO LED OLD",
-            image: "/vario_ledOld.png",
-            prices: { 12: 105000, 24: 150000 },
-            features: []
         },
         {
             id: "fazzio_keyless_w",
@@ -258,129 +250,14 @@ export const catalogData = {
             image: "/yamahalexi.png",
             prices: { 12: 115000, 24: 170000 },
             features: ["Include Sarung Tangan"]
+        },
+        {
+            id: "aerox_w",
+            name: "YAMAHA AEROX",
+            image: "/aerox.png",
+            prices: { 12: 115000, 24: 180000 },
+            features: []
         }
     ],
-
-    // HOLIDAY SEASON CATALOG (Dynamic)
-    seasonal: [
-        {
-            id: "jupiter_z_holiday",
-            name: "YAMAHA JUPITER Z",
-            image: "/jupiterz.png",
-            prices: { 6: 50000, 12: 60000, 24: 85000 },
-            features: []
-        },
-        {
-            id: "mio_m3_holiday",
-            name: "YAMAHA MIO M3",
-            image: "/mio.png",
-            prices: { 6: 55000, 12: 65000, 24: 100000 },
-            features: ["Include Sarung Tangan"]
-        },
-        {
-            id: "mio_z_holiday",
-            name: "YAMAHA MIO Z",
-            image: "/mioz.png",
-            prices: { 3: 50000, 6: 55000, 12: 70000, 24: 100000 },
-            features: ["Super Ekonomis"]
-        },
-        {
-            id: "beat_pop_holiday",
-            name: "HONDA BEAT POP",
-            image: "/beat_pop.png",
-            prices: { 3: 50000, 6: 55000, 12: 75000, 24: 110000 },
-            features: ["Include Sarung Tangan"]
-        },
-        {
-            id: "vario_kzr_holiday",
-            name: "HONDA VARIO KZR",
-            image: "/vario_kzr.png",
-            prices: { 3: 55000, 6: 60000, 12: 80000, 24: 115000 },
-            features: []
-        },
-        {
-            id: "beat_2018_holiday",
-            name: "HONDA BEAT 2018",
-            image: "/beat2018.png",
-            prices: { 3: 60000, 6: 65000, 12: 90000, 24: 120000 },
-            features: []
-        },
-        {
-            id: "genio_holiday",
-            name: "HONDA GENIO 2022",
-            image: "/genio2022.png",
-            prices: { 3: 60000, 6: 65000, 12: 90000, 24: 125000 },
-            features: ["Include Sarung Tangan"]
-        },
-        {
-            id: "beat_street_holiday",
-            name: "HONDA BEAT STREET",
-            image: "/beat_street.png",
-            prices: { 3: 65000, 6: 70000, 12: 95000, 24: 130000 },
-            features: []
-        },
-        {
-            id: "beat_deluxe_holiday",
-            name: "HONDA BEAT DELUXE",
-            image: "/beat_deluxe.png",
-            prices: { 3: 65000, 6: 70000, 12: 95000, 24: 130000 },
-            features: ["Include Sarung Tangan"]
-        },
-        {
-            id: "scoopy_2023_holiday",
-            name: "HONDA SCOOPY 2023",
-            image: "/scoopy2023.png",
-            prices: { 3: 65000, 6: 70000, 12: 95000, 24: 135000 },
-            features: ["Include Sarung Tangan"]
-        },
-        {
-            id: "scoopy_keyless_holiday",
-            name: "ALLNEW SCOOPY KEYLESS 2025",
-            image: "/scoopy_keyless.png",
-            prices: { 3: 65000, 6: 70000, 12: 100000, 24: 140000 },
-            features: []
-        },
-        {
-            id: "gear_matic_holiday",
-            name: "YAMAHA GEAR MATIC",
-            image: "/gear_matic.png",
-            prices: { 3: 65000, 6: 70000, 12: 100000, 24: 145000 },
-            features: ["Include Sarung Tangan"]
-        },
-        {
-            id: "vario_led_old_holiday",
-            name: "VARIO LED OLD",
-            image: "/vario_ledOld.png",
-            prices: { 3: 70000, 6: 75000, 12: 105000, 24: 150000 },
-            features: []
-        },
-        {
-            id: "fazzio_keyless_holiday",
-            name: "YAMAHA FAZZIO KEYLESS",
-            image: "/fazzio.png",
-            prices: { 3: 75000, 6: 80000, 12: 105000, 24: 155000 },
-            features: ["Include Sarung Tangan"]
-        },
-        {
-            id: "nmax_old_holiday",
-            name: "YAMAHA NMAX OLD 2019",
-            image: "/nmax.png",
-            prices: { 3: 75000, 6: 80000, 12: 110000, 24: 165000 },
-            features: []
-        },
-        {
-            id: "lexi_lx_holiday",
-            name: "LEXI LX 155 KEYLESS",
-            image: "/yamahalexi.png",
-            prices: { 3: 75000, 6: 80000, 12: 115000, 24: 170000 },
-            features: ["Include Sarung Tangan"]
-        },
-        {
-            id: "nmax_keyless_holiday",
-            name: "YAMAHA NMAX KEYLESS",
-            image: "/nmax_keyless.png",
-            prices: { 3: 75000, 6: 80000, 12: 115000, 24: 175000 },
-            features: []
-        }
-    ]
+    seasonal: []
 };
