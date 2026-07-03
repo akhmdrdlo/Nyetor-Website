@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { createClient } from '@supabase/supabase-js';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
     Calendar as CalendarIcon, 
@@ -59,7 +60,41 @@ const getHashes = async (text) => {
 const DEFAULT_USER_HASHES = { native: '8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918', fallback: 'fallback_f12fc8e' }; // "admin"
 const DEFAULT_PASS_HASHES = { native: '70ee29669a9898e23a6f837c4608e3f9111cd70c9b14dd69f75d4a1e7b5ef575', fallback: 'fallback_96abb98f' }; // "nyetoradmin"
 
+// Function to get active Supabase credentials
+const getSupabaseCredentials = () => {
+    const localUrl = localStorage.getItem('nyetor_supabase_url') || '';
+    const localKey = localStorage.getItem('nyetor_supabase_anon_key') || '';
+    
+    // Check vite env config
+    const envUrl = (import.meta.env && import.meta.env.VITE_SUPABASE_URL) || '';
+    const envKey = (import.meta.env && import.meta.env.VITE_SUPABASE_ANON_KEY) || '';
+
+    return {
+        url: localUrl || envUrl,
+        key: localKey || envKey,
+        isConfigured: !!(localUrl || envUrl) && !!(localKey || envKey)
+    };
+};
+
+// Create client dynamically
+let supabase = null;
+const creds = getSupabaseCredentials();
+if (creds.isConfigured) {
+    try {
+        supabase = createClient(creds.url, creds.key);
+    } catch (e) {
+        console.error("Failed to initialize Supabase client:", e);
+    }
+}
+
 export default function AdminPanel({ onClose }) {
+    // Supabase Config States
+    const [isDbConfigured, setIsDbConfigured] = useState(creds.isConfigured);
+    const [dbUrlInput, setDbUrlInput] = useState(creds.url);
+    const [dbKeyInput, setDbKeyInput] = useState(creds.key);
+    const [isDbConnecting, setIsDbConnecting] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
+
     // Auth State
     const [isLoggedIn, setIsLoggedIn] = useState(false);
     const [usernameInput, setUsernameInput] = useState('');
@@ -68,11 +103,24 @@ export default function AdminPanel({ onClose }) {
 
     // Admin Dashboard Active Tab
     const [activeTab, setActiveTab] = useState('summary'); // 'summary' | 'fleet' | 'booking' | 'logs' | 'backup'
+    const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
     // Database States
     const [fleet, setFleet] = useState([]);
     const [logs, setLogs] = useState([]);
     const [isLoadingXlsx, setIsLoadingXlsx] = useState(false);
+
+    // Rent Extension Modal state
+    const [extendingLog, setExtendingLog] = useState(null);
+    const [extensionForm, setExtensionForm] = useState({ additionalHours: 24, additionalFee: '' });
+
+    // Advanced log filters state
+    const [logFilterSearch, setLogFilterSearch] = useState('');
+    const [logFilterStatus, setLogFilterStatus] = useState('Semua'); // 'Semua' | 'Aktif' | 'Selesai'
+    const [logFilterDelivery, setLogFilterDelivery] = useState('Semua'); // 'Semua' | 'Kirim (Delivery)' | 'Ambil Sendiri'
+    const [logFilterBike, setLogFilterBike] = useState('Semua');
+    const [logFilterStartDate, setLogFilterStartDate] = useState('');
+    const [logFilterEndDate, setLogFilterEndDate] = useState('');
 
     // Form inputs state
     const [bookingForm, setBookingForm] = useState({
@@ -128,82 +176,179 @@ export default function AdminPanel({ onClose }) {
     });
     const [settingsMsg, setSettingsMsg] = useState({ text: '', type: 'success' });
 
-    // Load initial states from LocalStorage or sync with static catalog
+    // Setup Supabase locally from UI Form
+    const handleConnectDb = async (e) => {
+        e.preventDefault();
+        setIsDbConnecting(true);
+        try {
+            const tempClient = createClient(dbUrlInput.trim(), dbKeyInput.trim());
+            // Test query configs table
+            const { error } = await tempClient.from('nyetor_config').select('key').limit(1);
+            if (error) throw error;
+
+            // Success, save locally
+            localStorage.setItem('nyetor_supabase_url', dbUrlInput.trim());
+            localStorage.setItem('nyetor_supabase_anon_key', dbKeyInput.trim());
+            
+            alert('Sukses terhubung ke database cloud Supabase!');
+            window.location.reload();
+        } catch (err) {
+            console.error(err);
+            alert('Koneksi gagal! Silakan periksa kembali URL dan Anon Key Anda. Pastikan tabel "nyetor_config" telah dibuat di Supabase.');
+        } finally {
+            setIsDbConnecting(false);
+        }
+    };
+
+    // Load data from Supabase
+    const loadFromSupabase = async () => {
+        if (!supabase) return;
+        
+        try {
+            setIsLoading(true);
+            
+            // Fetch Fleet
+            const { data: fleetData, error: fleetErr } = await supabase
+                .from('nyetor_fleet')
+                .select('*')
+                .order('name', { ascending: true });
+                
+            if (fleetErr) throw fleetErr;
+            
+            // Fetch Logs
+            const { data: logsData, error: logsErr } = await supabase
+                .from('nyetor_logs')
+                .select('*')
+                .order('created_at', { ascending: false });
+                
+            if (logsErr) throw logsErr;
+
+            // Map fleet rows
+            const mappedFleet = (fleetData || []).map(row => ({
+                id: row.id,
+                bikeId: row.bike_id,
+                name: row.name,
+                plate: row.plate,
+                color: row.color,
+                status: row.status,
+                note: row.note || ''
+            }));
+
+            // Map logs rows
+            const mappedLogs = (logsData || []).map(row => ({
+                id: row.id,
+                renterName: row.renter_name,
+                phone: row.phone,
+                unitId: row.unit_id,
+                bikeName: row.bike_name,
+                plate: row.plate,
+                color: row.color,
+                guarantees: row.guarantees || [],
+                startDate: row.start_date,
+                startTime: row.start_time ? row.start_time.substring(0, 5) : '',
+                duration: row.duration,
+                endDate: row.end_date,
+                endTime: row.end_time ? row.end_time.substring(0, 5) : '',
+                status: row.status,
+                isDelivery: row.is_delivery,
+                deliveryZone: row.delivery_zone,
+                deliveryAddress: row.delivery_address || '',
+                deliveryStaff: row.delivery_staff || '',
+                rentalFee: Number(row.rental_fee || 0),
+                deliveryFee: Number(row.delivery_fee || 0),
+                totalRevenue: Number(row.total_revenue || 0),
+                createdAt: row.created_at
+            }));
+
+            setFleet(mappedFleet);
+            setLogs(mappedLogs);
+        } catch (err) {
+            console.error("Failed to load from Supabase:", err);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    // Load initial authentication states & fetch Supabase data
     useEffect(() => {
-        // Auth status persistence (session storage is appropriate for basic security)
+        // Auth status persistence
         const sessionAuth = sessionStorage.getItem('nyetor_admin_session');
         if (sessionAuth === 'true') {
             setIsLoggedIn(true);
         }
-
-        // Load Fleet
-        const storedFleet = localStorage.getItem('nyetor_admin_units');
-        if (storedFleet) {
-            setFleet(JSON.parse(storedFleet));
-        } else {
-            // Load from catalogData
-            const initialFleet = [];
-            let index = 1;
-            Object.entries(catalogData).forEach(([category, bikes]) => {
-                if (category === 'accessories' || category === 'seasonal' || category === 'warlok') return;
-                bikes.forEach((bike) => {
-                    if (!initialFleet.some(f => f.bikeId === bike.id)) {
-                        initialFleet.push({
-                            id: `${bike.id}_${Date.now()}_${index}`,
-                            bikeId: bike.id,
-                            name: bike.name,
-                            plate: `D ${1000 + index} NYT`,
-                            color: 'Hitam',
-                            status: 'Tersedia',
-                            note: ''
-                        });
-                        index++;
-                    }
-                });
-            });
-            setFleet(initialFleet);
-            localStorage.setItem('nyetor_admin_units', JSON.stringify(initialFleet));
-        }
-
-        // Load Booking logs
-        const storedLogs = localStorage.getItem('nyetor_admin_logs');
-        if (storedLogs) {
-            setLogs(JSON.parse(storedLogs));
-        }
     }, []);
 
-    // Save helpers
-    const saveFleet = (updatedFleet) => {
-        setFleet(updatedFleet);
-        localStorage.setItem('nyetor_admin_units', JSON.stringify(updatedFleet));
-    };
+    // Realtime changes listener subscription
+    useEffect(() => {
+        if (!supabase || !isLoggedIn) return;
 
-    const saveLogs = (updatedLogs) => {
-        setLogs(updatedLogs);
-        localStorage.setItem('nyetor_admin_logs', JSON.stringify(updatedLogs));
-    };
+        loadFromSupabase();
+
+        // Subscribe to changes in fleet
+        const fleetChannel = supabase
+            .channel('fleet-changes')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'nyetor_fleet' }, () => {
+                loadFromSupabase();
+            })
+            .subscribe();
+
+        // Subscribe to changes in logs
+        const logsChannel = supabase
+            .channel('logs-changes')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'nyetor_logs' }, () => {
+                loadFromSupabase();
+            })
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(fleetChannel);
+            supabase.removeChannel(logsChannel);
+        };
+    }, [isLoggedIn]);
 
     // Handle Login
     const handleLogin = async (e) => {
         e.preventDefault();
         setAuthError('');
 
-        const inputUserHashes = await getHashes(usernameInput.trim());
-        const inputPassHashes = await getHashes(passwordInput);
+        if (!supabase) {
+            setAuthError('Supabase tidak terhubung!');
+            return;
+        }
 
-        const storedUserHash = localStorage.getItem('nyetor_admin_user_hash') || DEFAULT_USER_HASHES.native;
-        const storedUserFallback = localStorage.getItem('nyetor_admin_user_fallback') || DEFAULT_USER_HASHES.fallback;
-        const storedPassHash = localStorage.getItem('nyetor_admin_pass_hash') || DEFAULT_PASS_HASHES.native;
-        const storedPassFallback = localStorage.getItem('nyetor_admin_pass_fallback') || DEFAULT_PASS_HASHES.fallback;
+        try {
+            // Fetch credentials config table
+            const { data: configData, error: configError } = await supabase
+                .from('nyetor_config')
+                .select('*');
 
-        const isUserValid = (inputUserHashes.native === storedUserHash) || (inputUserHashes.fallback === storedUserFallback);
-        const isPassValid = (inputPassHashes.native === storedPassHash) || (inputPassHashes.fallback === storedPassFallback);
+            if (configError) throw configError;
 
-        if (isUserValid && isPassValid) {
-            setIsLoggedIn(true);
-            sessionStorage.setItem('nyetor_admin_session', 'true');
-        } else {
-            setAuthError('Username atau Password salah!');
+            const configMap = {};
+            (configData || []).forEach(row => {
+                configMap[row.key] = row.value;
+            });
+
+            const inputUserHashes = await getHashes(usernameInput.trim());
+            const inputPassHashes = await getHashes(passwordInput);
+
+            const storedUserHash = configMap['admin_user_hash'] || DEFAULT_USER_HASHES.native;
+            const storedUserFallback = configMap['admin_user_fallback'] || DEFAULT_USER_HASHES.fallback;
+            const storedPassHash = configMap['admin_pass_hash'] || DEFAULT_PASS_HASHES.native;
+            const storedPassFallback = configMap['admin_pass_fallback'] || DEFAULT_PASS_HASHES.fallback;
+
+            const isUserValid = (inputUserHashes.native === storedUserHash) || (inputUserHashes.fallback === storedUserFallback);
+            const isPassValid = (inputPassHashes.native === storedPassHash) || (inputPassHashes.fallback === storedPassFallback);
+
+            if (isUserValid && isPassValid) {
+                setIsLoggedIn(true);
+                sessionStorage.setItem('nyetor_admin_session', 'true');
+            } else {
+                setAuthError('Username atau Password salah!');
+            }
+        } catch (err) {
+            console.error("Login verification failed:", err);
+            setAuthError('Koneksi database gagal: ' + err.message);
         }
     };
 
@@ -218,40 +363,63 @@ export default function AdminPanel({ onClose }) {
         e.preventDefault();
         setSettingsMsg({ text: '', type: 'success' });
 
-        const currentPassHashes = await getHashes(settingsForm.currentPassword);
-        const storedPassHash = localStorage.getItem('nyetor_admin_pass_hash') || DEFAULT_PASS_HASHES.native;
-        const storedPassFallback = localStorage.getItem('nyetor_admin_pass_fallback') || DEFAULT_PASS_HASHES.fallback;
-
-        const isCurrentValid = (currentPassHashes.native === storedPassHash) || (currentPassHashes.fallback === storedPassFallback);
-        if (!isCurrentValid) {
-            setSettingsMsg({ text: 'Password saat ini salah!', type: 'error' });
+        if (!supabase) {
+            setSettingsMsg({ text: 'Database tidak terhubung!', type: 'error' });
             return;
         }
 
-        if (settingsForm.newPassword !== settingsForm.confirmNewPassword) {
-            setSettingsMsg({ text: 'Konfirmasi password baru tidak cocok!', type: 'error' });
-            return;
-        }
+        try {
+            // Fetch credentials
+            const { data: configData, error: configErr } = await supabase.from('nyetor_config').select('*');
+            if (configErr) throw configErr;
 
-        if (settingsForm.newUsername.trim()) {
-            const userHashes = await getHashes(settingsForm.newUsername.trim());
-            localStorage.setItem('nyetor_admin_user_hash', userHashes.native);
-            localStorage.setItem('nyetor_admin_user_fallback', userHashes.fallback);
-        }
+            const configMap = {};
+            (configData || []).forEach(row => {
+                configMap[row.key] = row.value;
+            });
 
-        if (settingsForm.newPassword) {
-            const passHashes = await getHashes(settingsForm.newPassword);
-            localStorage.setItem('nyetor_admin_pass_hash', passHashes.native);
-            localStorage.setItem('nyetor_admin_pass_fallback', passHashes.fallback);
-        }
+            const currentPassHashes = await getHashes(settingsForm.currentPassword);
+            const storedPassHash = configMap['admin_pass_hash'] || DEFAULT_PASS_HASHES.native;
+            const storedPassFallback = configMap['admin_pass_fallback'] || DEFAULT_PASS_HASHES.fallback;
 
-        setSettingsMsg({ text: 'Kredensial berhasil diperbarui!', type: 'success' });
-        setSettingsForm({
-            currentPassword: '',
-            newUsername: '',
-            newPassword: '',
-            confirmNewPassword: ''
-        });
+            const isCurrentValid = (currentPassHashes.native === storedPassHash) || (currentPassHashes.fallback === storedPassFallback);
+            if (!isCurrentValid) {
+                setSettingsMsg({ text: 'Password saat ini salah!', type: 'error' });
+                return;
+            }
+
+            if (settingsForm.newPassword && settingsForm.newPassword !== settingsForm.confirmNewPassword) {
+                setSettingsMsg({ text: 'Konfirmasi password baru tidak cocok!', type: 'error' });
+                return;
+            }
+
+            if (settingsForm.newUsername.trim()) {
+                const userHashes = await getHashes(settingsForm.newUsername.trim());
+                await supabase.from('nyetor_config').upsert([
+                    { key: 'admin_user_hash', value: userHashes.native },
+                    { key: 'admin_user_fallback', value: userHashes.fallback }
+                ]);
+            }
+
+            if (settingsForm.newPassword) {
+                const passHashes = await getHashes(settingsForm.newPassword);
+                await supabase.from('nyetor_config').upsert([
+                    { key: 'admin_pass_hash', value: passHashes.native },
+                    { key: 'admin_pass_fallback', value: passHashes.fallback }
+                ]);
+            }
+
+            setSettingsMsg({ text: 'Kredensial berhasil diperbarui di cloud database!', type: 'success' });
+            setSettingsForm({
+                currentPassword: '',
+                newUsername: '',
+                newPassword: '',
+                confirmNewPassword: ''
+            });
+        } catch (err) {
+            console.error("Settings update failed:", err);
+            setSettingsMsg({ text: 'Gagal memperbarui di database: ' + err.message, type: 'error' });
+        }
     };
 
     // Calculate dates helper
@@ -320,12 +488,17 @@ export default function AdminPanel({ onClose }) {
     };
 
     // Handle booking submit
-    const handleSaveBooking = (e) => {
+    const handleSaveBooking = async (e) => {
         e.preventDefault();
         const { renterName, whatsapp, unitId, startDate, startTime, duration, isDelivery, deliveryZonePrice, deliveryAddress, deliveryStaff, customRentalFee, guarantees, customGuarantee } = bookingForm;
 
         if (!renterName || !whatsapp || !unitId || !startDate || !startTime) {
             alert('Harap isi semua field utama penyewaan!');
+            return;
+        }
+
+        if (!supabase) {
+            alert('Database tidak terhubung!');
             return;
         }
 
@@ -354,102 +527,175 @@ export default function AdminPanel({ onClose }) {
 
         const transactionId = `TX-${Date.now().toString().slice(-6)}`;
 
-        const newLog = {
+        const newLogDb = {
             id: transactionId,
-            renterName,
+            renter_name: renterName,
             phone: whatsapp,
-            unitId,
-            bikeName: selectedUnit.name,
+            unit_id: unitId,
+            bike_name: selectedUnit.name,
             plate: selectedUnit.plate,
             color: selectedUnit.color || 'Hitam',
             guarantees: activeGuarantees,
-            startDate,
-            startTime,
+            start_date: startDate,
+            start_time: startTime + ':00', // HH:mm:ss for Postgres
             duration: Number(duration),
-            endDate,
-            endTime,
+            end_date: endDate,
+            end_time: endTime + ':00',
             status: 'Aktif',
-            isDelivery,
-            deliveryZone: zoneLabel,
-            deliveryAddress: isDelivery ? deliveryAddress : '',
-            deliveryStaff: isDelivery ? deliveryStaff : '',
-            rentalFee: baseRate,
-            deliveryFee: delFee,
-            totalRevenue: total,
-            createdAt: new Date().toISOString()
+            is_delivery: isDelivery,
+            delivery_zone: zoneLabel,
+            delivery_address: isDelivery ? deliveryAddress : '',
+            delivery_staff: isDelivery ? deliveryStaff : '',
+            rental_fee: baseRate,
+            delivery_fee: delFee,
+            total_revenue: total
         };
 
-        // Update logs
-        saveLogs([newLog, ...logs]);
+        try {
+            // 1. Save Log
+            const { error: logErr } = await supabase.from('nyetor_logs').insert([newLogDb]);
+            if (logErr) throw logErr;
 
-        // Update motor status to "Terbooking" if the booking starts immediately or is active currently
-        const startTimestamp = new Date(`${startDate}T${startTime}`).getTime();
-        const endTimestamp = new Date(`${endDate}T${endTime}`).getTime();
-        const currentTimestamp = Date.now();
+            // 2. Update motor status to "Terbooking" if booking starts now
+            const startTimestamp = new Date(`${startDate}T${startTime}`).getTime();
+            const endTimestamp = new Date(`${endDate}T${endTime}`).getTime();
+            const currentTimestamp = Date.now();
 
-        if (currentTimestamp >= startTimestamp && currentTimestamp <= endTimestamp) {
-            const updatedFleet = fleet.map(u => {
-                if (u.id === unitId) {
-                    return { ...u, status: 'Terbooking' };
-                }
-                return u;
+            if (currentTimestamp >= startTimestamp && currentTimestamp <= endTimestamp) {
+                const { error: fleetErr } = await supabase
+                    .from('nyetor_fleet')
+                    .update({ status: 'Terbooking' })
+                    .eq('id', unitId);
+                if (fleetErr) throw fleetErr;
+            }
+
+            // Reset form
+            setBookingForm({
+                renterName: '',
+                whatsapp: '',
+                unitId: '',
+                guarantees: [],
+                customGuarantee: '',
+                startDate: '',
+                startTime: '',
+                duration: 24,
+                isDelivery: false,
+                deliveryZonePrice: 0,
+                deliveryAddress: '',
+                deliveryStaff: '',
+                customRentalFee: ''
             });
-            saveFleet(updatedFleet);
+            setBikeSearchQuery('');
+            setZoneSearchQuery('');
+            alert('Booking penyewaan berhasil disimpan ke cloud database!');
+            setActiveTab('logs');
+        } catch (err) {
+            console.error("Save booking failed:", err);
+            alert("Gagal menyimpan booking ke database: " + err.message);
         }
-
-        // Reset form
-        setBookingForm({
-            renterName: '',
-            whatsapp: '',
-            unitId: '',
-            guarantees: [],
-            customGuarantee: '',
-            startDate: '',
-            startTime: '',
-            duration: 24,
-            isDelivery: false,
-            deliveryZonePrice: 0,
-            deliveryAddress: '',
-            deliveryStaff: '',
-            customRentalFee: ''
-        });
-        setBikeSearchQuery('');
-        setZoneSearchQuery('');
-        alert('Booking penyewaan berhasil dicatat!');
-        setActiveTab('logs');
     };
 
     // End/Resolve active booking
-    const handleResolveBooking = (logId) => {
+    const handleResolveBooking = async (logId) => {
         const targetLog = logs.find(l => l.id === logId);
-        if (!targetLog) return;
+        if (!targetLog || !supabase) return;
 
         if (window.confirm(`Apakah Anda yakin penyewaan oleh ${targetLog.renterName} sudah selesai dan unit motor sudah dikembalikan?`)) {
-            // Update logs status
-            const updatedLogs = logs.map(l => {
-                if (l.id === logId) return { ...l, status: 'Selesai' };
-                return l;
-            });
-            saveLogs(updatedLogs);
+            try {
+                // 1. Update log status
+                const { error: logErr } = await supabase
+                    .from('nyetor_logs')
+                    .update({ status: 'Selesai' })
+                    .eq('id', logId);
+                if (logErr) throw logErr;
 
-            // Update motor status to "Tersedia" if it is currently "Terbooking"
-            const updatedFleet = fleet.map(u => {
-                if (u.id === targetLog.unitId && u.status === 'Terbooking') {
-                    return { ...u, status: 'Tersedia' };
-                }
-                return u;
+                // 2. Restore motor status to "Tersedia"
+                const { error: fleetErr } = await supabase
+                    .from('nyetor_fleet')
+                    .update({ status: 'Tersedia' })
+                    .eq('id', targetLog.unitId);
+                if (fleetErr) throw fleetErr;
+
+                alert('Penyewaan diselesaikan dan motor kembali tersedia!');
+            } catch (err) {
+                console.error("Resolve booking failed:", err);
+                alert("Gagal memperbarui status sewa: " + err.message);
+            }
+        }
+    };
+
+    // Recalculate fee dynamically for extensions
+    const handleExtensionHoursChange = (hoursVal, bikeName) => {
+        const hrs = Number(hoursVal);
+        setExtensionForm(prev => {
+            let bikeId = '';
+            Object.values(catalogData).forEach(bikes => {
+                const found = bikes.find(b => b.name === bikeName);
+                if (found) bikeId = found.id;
             });
-            saveFleet(updatedFleet);
+            const rate = getCatalogRate(bikeId, hrs);
+            return {
+                ...prev,
+                additionalHours: hoursVal,
+                additionalFee: rate || ''
+            };
+        });
+    };
+
+    // Save Extension Booking
+    const handleSaveExtension = async (e) => {
+        e.preventDefault();
+        if (!extendingLog || !supabase) return;
+
+        const additionalHours = Number(extensionForm.additionalHours);
+        const additionalFee = Number(extensionForm.additionalFee);
+
+        if (isNaN(additionalHours) || additionalHours <= 0) {
+            alert('Durasi tambahan tidak valid!');
+            return;
+        }
+
+        const newDuration = extendingLog.duration + additionalHours;
+        const newRentalFee = extendingLog.rentalFee + additionalFee;
+        const newTotalRevenue = extendingLog.totalRevenue + additionalFee;
+
+        // Recalculate end date & time based on start_date, start_time, and new total duration
+        const { date: newEndDate, time: newEndTime } = getEndDate(extendingLog.startDate, extendingLog.startTime, newDuration);
+
+        try {
+            const { error } = await supabase
+                .from('nyetor_logs')
+                .update({
+                    duration: newDuration,
+                    end_date: newEndDate,
+                    end_time: newEndTime + ':00',
+                    rental_fee: newRentalFee,
+                    total_revenue: newTotalRevenue
+                })
+                .eq('id', extendingLog.id);
+
+            if (error) throw error;
+
+            alert('Sewa berhasil diperpanjang!');
+            setExtendingLog(null);
+        } catch (err) {
+            console.error("Failed to extend booking:", err);
+            alert("Gagal memperpanjang sewa di database: " + err.message);
         }
     };
 
     // Fleet management: add new physical unit
-    const handleAddFleetUnit = (e) => {
+    const handleAddFleetUnit = async (e) => {
         e.preventDefault();
         const { bikeId, plate, color, status, note } = newUnitForm;
         
         if (!bikeId || !plate) {
             alert('Harap pilih jenis motor dan isi plat nomor!');
+            return;
+        }
+
+        if (!supabase) {
+            alert('Database tidak terhubung!');
             return;
         }
 
@@ -460,9 +706,9 @@ export default function AdminPanel({ onClose }) {
             if (found) catalogName = found.name;
         });
 
-        const newUnit = {
+        const newUnitDb = {
             id: `${bikeId}_${Date.now()}`,
-            bikeId,
+            bike_id: bikeId,
             name: catalogName,
             plate: plate.trim().toUpperCase(),
             color: color.trim() || 'Hitam',
@@ -470,9 +716,16 @@ export default function AdminPanel({ onClose }) {
             note: note.trim()
         };
 
-        saveFleet([...fleet, newUnit]);
-        setNewUnitForm({ bikeId: '', plate: '', color: '', status: 'Tersedia', note: '' });
-        alert('Unit motor baru berhasil ditambahkan!');
+        try {
+            const { error: fleetErr } = await supabase.from('nyetor_fleet').insert([newUnitDb]);
+            if (fleetErr) throw fleetErr;
+            
+            setNewUnitForm({ bikeId: '', plate: '', color: '', status: 'Tersedia', note: '' });
+            alert('Unit motor baru berhasil disimpan ke cloud database!');
+        } catch (err) {
+            console.error("Add unit failed:", err);
+            alert("Gagal menambahkan unit ke database: " + err.message);
+        }
     };
 
     // Fleet management: edit physical unit
@@ -486,9 +739,14 @@ export default function AdminPanel({ onClose }) {
         });
     };
 
-    const handleSaveUnitEdit = (id) => {
+    const handleSaveUnitEdit = async (id) => {
         if (!editForm.plate.trim()) {
             alert('Plat nomor tidak boleh kosong!');
+            return;
+        }
+
+        if (!supabase) {
+            alert('Database tidak terhubung!');
             return;
         }
 
@@ -501,33 +759,49 @@ export default function AdminPanel({ onClose }) {
             if (!proceed) return;
         }
 
-        const updatedFleet = fleet.map(u => {
-            if (u.id === id) {
-                return {
-                    ...u,
+        try {
+            const { error: fleetErr } = await supabase
+                .from('nyetor_fleet')
+                .update({
                     plate: editForm.plate.trim().toUpperCase(),
                     color: editForm.color.trim(),
                     status: editForm.status,
                     note: editForm.note.trim()
-                };
-            }
-            return u;
-        });
+                })
+                .eq('id', id);
+            if (fleetErr) throw fleetErr;
 
-        saveFleet(updatedFleet);
-        setEditingUnitId(null);
+            setEditingUnitId(null);
+        } catch (err) {
+            console.error("Save unit edit failed:", err);
+            alert("Gagal menyimpan perubahan unit: " + err.message);
+        }
     };
 
-    const handleDeleteUnit = (id) => {
+    const handleDeleteUnit = async (id) => {
         const hasActiveLog = logs.some(l => l.unitId === id && l.status === 'Aktif');
         if (hasActiveLog) {
             alert('Gagal menghapus! Unit motor ini sedang memiliki transaksi sewa aktif.');
             return;
         }
 
+        if (!supabase) {
+            alert('Database tidak terhubung!');
+            return;
+        }
+
         if (window.confirm('Apakah Anda yakin ingin menghapus unit motor ini secara permanen dari armada?')) {
-            const updatedFleet = fleet.filter(u => u.id !== id);
-            saveFleet(updatedFleet);
+            try {
+                const { error: fleetErr } = await supabase
+                    .from('nyetor_fleet')
+                    .delete()
+                    .eq('id', id);
+                if (fleetErr) throw fleetErr;
+                alert('Unit motor berhasil dihapus dari cloud database!');
+            } catch (err) {
+                console.error("Delete unit failed:", err);
+                alert("Gagal menghapus unit: " + err.message);
+            }
         }
     };
 
@@ -542,6 +816,33 @@ export default function AdminPanel({ onClose }) {
         const end = new Date(`${endDateStr}T${endTimeStr}`);
         const diffMs = Date.now() - end.getTime();
         return Math.max(0, Math.floor(diffMs / (1000 * 60 * 60)));
+    };
+
+    // Calculate Analytics
+    const getPopularMotorsData = () => {
+        const counts = {};
+        logs.forEach(log => {
+            if (log.bikeName) {
+                counts[log.bikeName] = (counts[log.bikeName] || 0) + 1;
+            }
+        });
+        return Object.entries(counts)
+            .map(([name, count]) => ({ name, count }))
+            .sort((a, b) => b.count - a.count)
+            .slice(0, 5);
+    };
+
+    const getRevenueTrendData = () => {
+        const dailyRevenue = {};
+        logs.forEach(log => {
+            if (log.startDate) {
+                dailyRevenue[log.startDate] = (dailyRevenue[log.startDate] || 0) + Number(log.totalRevenue || 0);
+            }
+        });
+        return Object.entries(dailyRevenue)
+            .map(([date, revenue]) => ({ date, revenue }))
+            .sort((a, b) => a.date.localeCompare(b.date))
+            .slice(-7);
     };
 
     // Statistics Calculations
@@ -917,13 +1218,68 @@ export default function AdminPanel({ onClose }) {
         }
     };
 
-    const confirmImport = () => {
-        if (!importPreview) return;
-        saveFleet(importPreview.units);
-        saveLogs(importPreview.logs);
-        setIsImportModalOpen(false);
-        setImportPreview(null);
-        alert('Data berhasil di-import dan disinkronkan!');
+    const confirmImport = async () => {
+        if (!importPreview || !supabase) return;
+        
+        try {
+            setIsLoadingXlsx(true);
+            
+            // 1. Delete all current rows in fleet (cascade deletes logs)
+            const { error: deleteErr } = await supabase.from('nyetor_fleet').delete().neq('id', 'placeholder_delete_preventer');
+            if (deleteErr) throw deleteErr;
+
+            // 2. Insert imported units
+            const dbUnits = importPreview.units.map(u => ({
+                id: u.id,
+                bike_id: u.bikeId,
+                name: u.name,
+                plate: u.plate,
+                color: u.color,
+                status: u.status,
+                note: u.note || ''
+            }));
+            const { error: unitInsertErr } = await supabase.from('nyetor_fleet').insert(dbUnits);
+            if (unitInsertErr) throw unitInsertErr;
+
+            // 3. Insert imported logs
+            const dbLogs = importPreview.logs.map(l => ({
+                id: l.id,
+                renter_name: l.renterName,
+                phone: l.phone,
+                unit_id: l.unitId,
+                bike_name: l.bikeName,
+                plate: l.plate,
+                color: l.color || 'Hitam',
+                guarantees: l.guarantees,
+                start_date: l.startDate,
+                start_time: l.startTime.length === 5 ? l.startTime + ':00' : l.startTime,
+                duration: l.duration,
+                end_date: l.endDate,
+                end_time: l.endTime.length === 5 ? l.endTime + ':00' : l.endTime,
+                status: l.status,
+                is_delivery: l.isDelivery,
+                delivery_zone: l.deliveryZone,
+                delivery_address: l.deliveryAddress,
+                delivery_staff: l.deliveryStaff,
+                rental_fee: l.rentalFee,
+                delivery_fee: l.deliveryFee,
+                total_revenue: l.totalRevenue
+            }));
+
+            if (dbLogs.length > 0) {
+                const { error: logsInsertErr } = await supabase.from('nyetor_logs').insert(dbLogs);
+                if (logsInsertErr) throw logsInsertErr;
+            }
+
+            setIsImportModalOpen(false);
+            setImportPreview(null);
+            alert('Database cloud Supabase berhasil disinkronkan dengan berkas Excel!');
+        } catch (err) {
+            console.error("Import sync failed:", err);
+            alert("Gagal sinkronisasi data Excel ke Supabase: " + err.message);
+        } finally {
+            setIsLoadingXlsx(false);
+        }
     };
 
     // Helpers to render statuses nicely
@@ -1030,6 +1386,88 @@ export default function AdminPanel({ onClose }) {
         return 'Tersedia';
     };
 
+    // RENDER DATABASE SETUP SCREEN IF NOT CONFIGURED
+    if (!isDbConfigured) {
+        return (
+            <div className="fixed inset-0 z-50 bg-black text-white flex items-center justify-center p-4">
+                {/* Background Parallax Image like Hero section */}
+                <div className="absolute inset-0 z-0">
+                    <img
+                        src="/bandung.png"
+                        alt="Bandung City View"
+                        className="w-full h-full object-cover opacity-60"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/10 to-[#07070a] z-10" />
+                </div>
+                
+                {/* Configuration Card */}
+                <div className="relative z-20 w-full max-w-md bg-zinc-950/75 border border-zinc-800/80 backdrop-blur-xl p-8 rounded-2xl shadow-2xl">
+                    <div className="text-center mb-6">
+                        <img src="/Nyetor Logo Transparent.png" alt="Nyetor Logo" className="h-16 mx-auto mb-4 brightness-200" />
+                        <h2 className="text-xl font-black text-white tracking-tight uppercase">SETUP DATABASE SUPABASE</h2>
+                        <p className="text-zinc-400 text-xs mt-1">Langkah awal untuk sinkronisasi multi-user secara real-time</p>
+                    </div>
+
+                    <form onSubmit={handleConnectDb} className="space-y-4">
+                        <div>
+                            <label className="block text-zinc-300 text-xs font-semibold mb-2">SUPABASE URL</label>
+                            <input 
+                                type="url" 
+                                className="w-full bg-zinc-900/80 border border-zinc-800 rounded-lg py-2 px-3 text-white placeholder-zinc-600 focus:outline-none focus:border-[#004aad] text-sm"
+                                placeholder="https://xxxxxx.supabase.co"
+                                value={dbUrlInput}
+                                onChange={(e) => setDbUrlInput(e.target.value)}
+                                required
+                            />
+                        </div>
+
+                        <div>
+                            <label className="block text-zinc-300 text-xs font-semibold mb-2">SUPABASE ANON KEY</label>
+                            <input 
+                                type="password" 
+                                className="w-full bg-zinc-900/80 border border-zinc-800 rounded-lg py-2 px-3 text-white placeholder-zinc-600 focus:outline-none focus:border-[#004aad] text-sm"
+                                placeholder="Masukkan Public Anon Key..."
+                                value={dbKeyInput}
+                                onChange={(e) => setDbKeyInput(e.target.value)}
+                                required
+                            />
+                        </div>
+
+                        <button 
+                            type="submit" 
+                            disabled={isDbConnecting}
+                            className="w-full btn py-2.5 text-sm font-bold tracking-wider mt-4 shadow-lg shadow-blue-500/10 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-55"
+                        >
+                            {isDbConnecting ? 'MENHUBUNGKAN...' : 'SIMPAN & HUBUNGKAN'}
+                        </button>
+                    </form>
+
+                    <div className="mt-6 border-t border-zinc-900 pt-4 text-center">
+                        <p className="text-[10px] text-zinc-500 text-left mb-3 leading-relaxed">
+                            * Pastikan Anda sudah membuat tabel database di Supabase SQL Editor dengan SQL setup script.
+                        </p>
+                        <div className="flex flex-col gap-2.5">
+                            <a 
+                                href="file:///C:/Users/Lenovo/.gemini/antigravity-ide/brain/5ff05edb-f322-45fc-afda-04c4c6468953/supabase_setup.sql"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-xs text-blue-400 hover:text-blue-300 transition-colors underline block"
+                            >
+                                Lihat/Unduh SQL Setup Script
+                            </a>
+                            <button 
+                                onClick={onClose}
+                                className="text-zinc-500 text-xs hover:text-white transition-colors cursor-pointer block mt-1"
+                            >
+                                Kembali ke Website
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
     // RENDER LOGIN SCREEN IF NOT AUTHENTICATED
     if (!isLoggedIn) {
         return (
@@ -1108,20 +1546,80 @@ export default function AdminPanel({ onClose }) {
         );
     }
 
+    const popularMotors = getPopularMotorsData();
+    const maxPopularCount = popularMotors.length > 0 ? Math.max(...popularMotors.map(m => m.count)) : 1;
+
+    const revenueTrend = getRevenueTrendData();
+    const maxRevenue = revenueTrend.length > 0 ? Math.max(...revenueTrend.map(r => r.revenue)) : 1;
+
+    // Generate SVG path for line chart
+    let points = '';
+    let fillPoints = '';
+    if (revenueTrend.length > 1) {
+        const coords = revenueTrend.map((r, i) => {
+            const x = (i / (revenueTrend.length - 1)) * 420 + 40;
+            const y = 160 - (r.revenue / maxRevenue) * 120;
+            return { x, y };
+        });
+        
+        points = `M ${coords.map(c => `${c.x},${c.y}`).join(' L ')}`;
+        fillPoints = `${points} L ${coords[coords.length - 1].x},160 L ${coords[0].x},160 Z`;
+    }
+
+    // Filtered logs calculation
+    const filteredLogs = logs.filter(log => {
+        const matchesSearch = logFilterSearch.trim() === '' || 
+            log.renterName.toLowerCase().includes(logFilterSearch.toLowerCase()) ||
+            log.plate.toLowerCase().includes(logFilterSearch.toLowerCase()) ||
+            log.id.toLowerCase().includes(logFilterSearch.toLowerCase());
+
+        const matchesStatus = logFilterStatus === 'Semua' || log.status === logFilterStatus;
+
+        const matchesDelivery = logFilterDelivery === 'Semua' || 
+            (logFilterDelivery === 'Kirim (Delivery)' && log.isDelivery) ||
+            (logFilterDelivery === 'Ambil Sendiri' && !log.isDelivery);
+
+        const matchesBike = logFilterBike === 'Semua' || log.bikeName === logFilterBike;
+
+        const matchesStartDate = logFilterStartDate === '' || log.startDate >= logFilterStartDate;
+        const matchesEndDate = logFilterEndDate === '' || log.startDate <= logFilterEndDate;
+
+        return matchesSearch && matchesStatus && matchesDelivery && matchesBike && matchesStartDate && matchesEndDate;
+    });
+
+    // Unique bike names list from logs for the dropdown filter
+    const uniqueBikesInLogs = Array.from(new Set(logs.map(l => l.bikeName).filter(Boolean)));
+
     // MAIN ADMIN PANEL VIEW
     return (
         <div className="fixed inset-0 z-50 bg-[#07070a] text-zinc-300 flex flex-col font-sans overflow-hidden">
             {/* Header */}
-            <header className="bg-zinc-950 border-b border-zinc-900 px-6 py-4 flex items-center justify-between shrink-0">
-                <div className="flex items-center gap-3">
-                    <img src="/Nyetor Logo Transparent.png" alt="Nyetor Logo" className="h-10 brightness-200" />
-                    <div className="h-6 w-[1px] bg-zinc-800" />
-                    <span className="text-[#004aad] font-black tracking-widest text-sm uppercase">DATABASE CONTROL PANEL</span>
+            <header className="bg-zinc-950 border-b border-zinc-900 px-4 md:px-6 py-4 flex items-center justify-between shrink-0">
+                <div className="flex items-center gap-2 md:gap-3">
+                    {/* Hamburger Button for Mobile */}
+                    <button 
+                        onClick={() => setIsMobileSidebarOpen(true)}
+                        className="p-1 text-zinc-400 hover:text-white md:hidden focus:outline-none"
+                        title="Buka Menu"
+                    >
+                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
+                        </svg>
+                    </button>
+
+                    {/* Logo: Large on Desktop, NY on Mobile */}
+                    <img src="/Nyetor Logo Transparent.png" alt="Nyetor Logo" className="h-10 brightness-200 hidden md:block" />
+                    <span className="md:hidden font-black text-2xl text-[#004aad] tracking-tighter">NY</span>
+
+                    <div className="h-6 w-[1px] bg-zinc-800 hidden md:block" />
+                    <span className="text-[#004aad] font-black tracking-widest text-xs md:text-sm uppercase truncate max-w-[120px] md:max-w-none">
+                        CONTROL PANEL
+                    </span>
                 </div>
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2 md:gap-4">
                     <button 
                         onClick={onClose} 
-                        className="text-zinc-400 hover:text-white text-sm font-medium transition-colors"
+                        className="text-zinc-400 hover:text-white text-xs md:text-sm font-medium transition-colors"
                     >
                         Halaman Utama
                     </button>
@@ -1130,62 +1628,105 @@ export default function AdminPanel({ onClose }) {
                         className="bg-rose-500/10 border border-rose-500/20 text-rose-400 hover:bg-rose-500 hover:text-white transition-all p-2 rounded-lg"
                         title="Keluar"
                     >
-                        <LogOut size={16} />
+                        <LogOut size={14} className="md:w-4 md:h-4" />
                     </button>
                 </div>
             </header>
 
             {/* Sidebar & content container */}
-            <div className="flex flex-1 overflow-hidden">
+            <div className="flex flex-1 overflow-hidden relative">
                 
+                {/* Backdrop Overlay for Mobile Sidebar */}
+                {isMobileSidebarOpen && (
+                    <div 
+                        className="fixed inset-0 z-40 bg-black/60 backdrop-blur-xs md:hidden"
+                        onClick={() => setIsMobileSidebarOpen(false)}
+                    />
+                )}
+
                 {/* Sidebar Navigation */}
-                <aside className="w-64 bg-zinc-950/50 border-r border-zinc-900 flex flex-col justify-between shrink-0 p-4">
-                    <nav className="space-y-1">
-                        <button 
-                            onClick={() => setActiveTab('summary')}
-                            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-semibold text-sm transition-all ${activeTab === 'summary' ? 'bg-[#004aad] text-white' : 'text-zinc-400 hover:bg-zinc-900/60 hover:text-zinc-200'}`}
-                        >
-                            <BarChart2 size={18} />
-                            <span>Dashboard & Kalender</span>
-                        </button>
-                        <button 
-                            onClick={() => setActiveTab('fleet')}
-                            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-semibold text-sm transition-all ${activeTab === 'fleet' ? 'bg-[#004aad] text-white' : 'text-zinc-400 hover:bg-zinc-900/60 hover:text-zinc-200'}`}
-                        >
-                            <Wrench size={18} />
-                            <span>Pengelolaan Armada</span>
-                        </button>
-                        <button 
-                            onClick={() => setActiveTab('booking')}
-                            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-semibold text-sm transition-all ${activeTab === 'booking' ? 'bg-[#004aad] text-white' : 'text-zinc-400 hover:bg-zinc-900/60 hover:text-zinc-200'}`}
-                        >
-                            <Plus size={18} />
-                            <span>Input Booking Form</span>
-                        </button>
-                        <button 
-                            onClick={() => setActiveTab('logs')}
-                            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-semibold text-sm transition-all ${activeTab === 'logs' ? 'bg-[#004aad] text-white' : 'text-zinc-400 hover:bg-zinc-900/60 hover:text-zinc-200'}`}
-                        >
-                            <Clock size={18} />
-                            <span>Riwayat & Logs</span>
-                            {logs.filter(l => l.status === 'Aktif').length > 0 && (
-                                <span className="ml-auto bg-blue-500/20 text-blue-400 border border-blue-500/30 text-xs px-2 py-0.5 rounded-full font-bold">
-                                    {logs.filter(l => l.status === 'Aktif').length}
-                                </span>
-                            )}
-                        </button>
-                        <button 
-                            onClick={() => setActiveTab('backup')}
-                            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-semibold text-sm transition-all ${activeTab === 'backup' ? 'bg-[#004aad] text-white' : 'text-zinc-400 hover:bg-zinc-900/60 hover:text-zinc-200'}`}
-                        >
-                            <FileSpreadsheet size={18} />
-                            <span>Database Excel (XLSX)</span>
-                        </button>
-                    </nav>
+                <aside className={`
+                    fixed inset-y-0 left-0 z-50 w-64 bg-zinc-950 border-r border-zinc-900 flex flex-col justify-between p-4 shadow-2xl transition-transform duration-300 md:relative md:translate-x-0 md:z-0 md:bg-zinc-950/50 md:shadow-none md:border-r-0
+                    ${isMobileSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
+                `}>
+                    <div>
+                        {/* Header for mobile sidebar with close button and large logo */}
+                        <div className="flex items-center justify-between mb-6 md:hidden">
+                            <img src="/Nyetor Logo Transparent.png" alt="Nyetor Logo" className="h-10 brightness-200" />
+                            <button 
+                                onClick={() => setIsMobileSidebarOpen(false)}
+                                className="p-1 text-zinc-400 hover:text-white"
+                                title="Tutup Menu"
+                            >
+                                <X size={20} />
+                            </button>
+                        </div>
+
+                        <nav className="space-y-1">
+                            <button 
+                                onClick={() => {
+                                    setActiveTab('summary');
+                                    setIsMobileSidebarOpen(false);
+                                }}
+                                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-semibold text-sm transition-all ${activeTab === 'summary' ? 'bg-[#004aad] text-white' : 'text-zinc-400 hover:bg-zinc-900/60 hover:text-zinc-200'}`}
+                            >
+                                <BarChart2 size={18} />
+                                <span>Dashboard & Kalender</span>
+                            </button>
+                            <button 
+                                onClick={() => {
+                                    setActiveTab('fleet');
+                                    setIsMobileSidebarOpen(false);
+                                }}
+                                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-semibold text-sm transition-all ${activeTab === 'fleet' ? 'bg-[#004aad] text-white' : 'text-zinc-400 hover:bg-zinc-900/60 hover:text-zinc-200'}`}
+                            >
+                                <Wrench size={18} />
+                                <span>Pengelolaan Armada</span>
+                            </button>
+                            <button 
+                                onClick={() => {
+                                    setActiveTab('booking');
+                                    setIsMobileSidebarOpen(false);
+                                }}
+                                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-semibold text-sm transition-all ${activeTab === 'booking' ? 'bg-[#004aad] text-white' : 'text-zinc-400 hover:bg-zinc-900/60 hover:text-zinc-200'}`}
+                            >
+                                <Plus size={18} />
+                                <span>Input Booking Form</span>
+                            </button>
+                            <button 
+                                onClick={() => {
+                                    setActiveTab('logs');
+                                    setIsMobileSidebarOpen(false);
+                                }}
+                                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-semibold text-sm transition-all ${activeTab === 'logs' ? 'bg-[#004aad] text-white' : 'text-zinc-400 hover:bg-zinc-900/60 hover:text-zinc-200'}`}
+                            >
+                                <Clock size={18} />
+                                <span>Riwayat & Logs</span>
+                                {logs.filter(l => l.status === 'Aktif').length > 0 && (
+                                    <span className="ml-auto bg-blue-500/20 text-blue-400 border border-blue-500/30 text-xs px-2 py-0.5 rounded-full font-bold">
+                                        {logs.filter(l => l.status === 'Aktif').length}
+                                    </span>
+                                )}
+                            </button>
+                            <button 
+                                onClick={() => {
+                                    setActiveTab('backup');
+                                    setIsMobileSidebarOpen(false);
+                                }}
+                                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-semibold text-sm transition-all ${activeTab === 'backup' ? 'bg-[#004aad] text-white' : 'text-zinc-400 hover:bg-zinc-900/60 hover:text-zinc-200'}`}
+                            >
+                                <FileSpreadsheet size={18} />
+                                <span>Database Excel (XLSX)</span>
+                            </button>
+                        </nav>
+                    </div>
 
                     <div className="border-t border-zinc-900 pt-4">
                         <button 
-                            onClick={() => setActiveTab('settings')}
+                            onClick={() => {
+                                setActiveTab('settings');
+                                setIsMobileSidebarOpen(false);
+                            }}
                             className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-semibold text-sm transition-all ${activeTab === 'settings' ? 'bg-zinc-800 text-white' : 'text-zinc-400 hover:bg-zinc-900/60'}`}
                         >
                             <Settings size={18} />
@@ -1435,7 +1976,128 @@ export default function AdminPanel({ onClose }) {
                                     </div>
                                 </div>
                             </div>
-                        </div>
+                            {/* Analytics Section */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 border-t border-zinc-900 pt-8 mt-4">
+                                    
+                                    {/* Popular Motors Chart */}
+                                    <div className="bg-zinc-950/80 border border-zinc-900 p-6 rounded-2xl">
+                                        <h3 className="text-lg font-bold text-white mb-6 flex items-center gap-2">
+                                            <BarChart2 size={18} className="text-blue-500" />
+                                            <span>Top 5 Motor Paling Laris</span>
+                                        </h3>
+                                        
+                                        {popularMotors.length === 0 ? (
+                                            <div className="text-zinc-600 text-sm text-center py-10">Belum ada riwayat transaksi sewa.</div>
+                                        ) : (
+                                            <div className="space-y-4">
+                                                {popularMotors.map((m, i) => (
+                                                    <div key={i} className="text-xs">
+                                                        <div className="flex justify-between font-bold text-zinc-300">
+                                                            <span>{i + 1}. {m.name}</span>
+                                                            <span className="text-blue-400">{m.count} kali disewa</span>
+                                                        </div>
+                                                        <div className="h-2.5 bg-zinc-900 border border-zinc-800/80 rounded-full overflow-hidden w-full mt-1.5 relative">
+                                                            <div 
+                                                                className="h-full bg-gradient-to-r from-[#004aad]/90 to-[#004aad]/50 rounded-full transition-all duration-500"
+                                                                style={{ width: `${(m.count / maxPopularCount) * 100}%` }}
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Revenue Trend Area Chart */}
+                                    <div className="bg-zinc-950/80 border border-zinc-900 p-6 rounded-2xl">
+                                        <h3 className="text-lg font-bold text-white mb-6 flex items-center gap-2">
+                                            <FileSpreadsheet size={18} className="text-emerald-500" />
+                                            <span>Tren Pendapatan Harian (7 Hari Terakhir)</span>
+                                        </h3>
+
+                                        {revenueTrend.length === 0 ? (
+                                            <div className="text-zinc-600 text-sm text-center py-10">Belum ada riwayat transaksi sewa.</div>
+                                        ) : (
+                                            <div className="w-full flex flex-col items-center">
+                                                {revenueTrend.length === 1 ? (
+                                                    <div className="text-center py-8">
+                                                        <span className="text-zinc-500 text-xs uppercase block">Pendapatan Hari ini</span>
+                                                        <span className="text-2xl font-black text-emerald-400 mt-1 block">Rp {revenueTrend[0].revenue.toLocaleString('id-ID')}</span>
+                                                        <span className="text-[10px] text-zinc-500 block mt-2">({revenueTrend[0].date})</span>
+                                                    </div>
+                                                ) : (
+                                                    <div className="w-full relative">
+                                                        <svg viewBox="0 0 500 200" className="w-full h-auto overflow-visible">
+                                                            <defs>
+                                                                <linearGradient id="revGrad" x1="0" y1="0" x2="0" y2="1">
+                                                                    <stop offset="0%" stopColor="#10b981" stopOpacity="0.3" />
+                                                                    <stop offset="100%" stopColor="#10b981" stopOpacity="0.0" />
+                                                                </linearGradient>
+                                                            </defs>
+
+                                                            {/* Horizontal grid lines */}
+                                                            <line x1="40" y1="40" x2="460" y2="40" stroke="#1f2937" strokeWidth="1" strokeDasharray="3 3" />
+                                                            <line x1="40" y1="100" x2="460" y2="100" stroke="#1f2937" strokeWidth="1" strokeDasharray="3 3" />
+                                                            <line x1="40" y1="160" x2="460" y2="160" stroke="#1f2937" strokeWidth="1" />
+
+                                                            {/* Gradient Area Fill */}
+                                                            {fillPoints && <path d={fillPoints} fill="url(#revGrad)" />}
+
+                                                            {/* Sparkline Line */}
+                                                            {points && (
+                                                                <path 
+                                                                    d={points} 
+                                                                    fill="none" 
+                                                                    stroke="#10b981" 
+                                                                    strokeWidth="3" 
+                                                                    strokeLinecap="round"
+                                                                    strokeLinejoin="round"
+                                                                />
+                                                            )}
+
+                                                            {/* Circles at nodes */}
+                                                            {revenueTrend.map((r, i) => {
+                                                                const x = (i / (revenueTrend.length - 1)) * 420 + 40;
+                                                                const y = 160 - (r.revenue / maxRevenue) * 120;
+                                                                return (
+                                                                    <g key={i} className="group cursor-pointer">
+                                                                        <circle 
+                                                                            cx={x} 
+                                                                            cy={y} 
+                                                                            r="4" 
+                                                                            fill="#10b981" 
+                                                                            stroke="#09090c" 
+                                                                            strokeWidth="2" 
+                                                                        />
+                                                                        <circle 
+                                                                            cx={x} 
+                                                                            cy={y} 
+                                                                            r="8" 
+                                                                            fill="#10b981" 
+                                                                            opacity="0"
+                                                                            className="hover:opacity-20 transition-opacity" 
+                                                                        />
+                                                                    </g>
+                                                                );
+                                                            })}
+                                                        </svg>
+                                                        {/* Labels */}
+                                                        <div className="flex justify-between text-[9px] text-zinc-500 font-mono mt-3 px-8">
+                                                            {revenueTrend.map((r, i) => {
+                                                                const parts = r.date.split('-');
+                                                                const label = `${parts[2]}/${parts[1]}`;
+                                                                return (
+                                                                    <span key={i} title={r.date}>{label}</span>
+                                                                );
+                                                            })}
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
                     )}
 
                     {/* FLEET MANAGEMENT TAB */}
@@ -1932,14 +2594,121 @@ export default function AdminPanel({ onClose }) {
                                 <p className="text-zinc-500 text-sm mt-1">Gunakan shortcut WA untuk mengirim pesan konfirmasi atau pengingat sewa.</p>
                             </div>
 
+                            {/* Advanced Filters Section */}
+                            <div className="bg-zinc-950/80 border border-zinc-900 p-6 rounded-2xl shadow-xl">
+                                <h3 className="text-sm font-bold text-white mb-4 flex items-center gap-2">
+                                    <Search size={16} className="text-[#004aad]" />
+                                    <span>Filter Pencarian Lanjutan</span>
+                                </h3>
+
+                                <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                                    {/* Text Search */}
+                                    <div>
+                                        <label className="block text-zinc-500 text-[10px] font-bold uppercase mb-1.5">Cari Penyewa / Plat / ID</label>
+                                        <input 
+                                            type="text"
+                                            className="w-full bg-zinc-900 border border-zinc-800 rounded-lg p-2 text-xs text-white placeholder-zinc-700 focus:outline-none focus:border-[#004aad]"
+                                            placeholder="Cari..."
+                                            value={logFilterSearch}
+                                            onChange={(e) => setLogFilterSearch(e.target.value)}
+                                        />
+                                    </div>
+
+                                    {/* Status Filter */}
+                                    <div>
+                                        <label className="block text-zinc-500 text-[10px] font-bold uppercase mb-1.5">Status Sewa</label>
+                                        <select 
+                                            className="w-full bg-zinc-900 border border-zinc-800 rounded-lg p-2 text-xs text-white focus:outline-none focus:border-[#004aad]"
+                                            value={logFilterStatus}
+                                            onChange={(e) => setLogFilterStatus(e.target.value)}
+                                        >
+                                            <option value="Semua">Semua Status</option>
+                                            <option value="Aktif">Aktif / Overdue</option>
+                                            <option value="Selesai">Selesai</option>
+                                        </select>
+                                    </div>
+
+                                    {/* Delivery Filter */}
+                                    <div>
+                                        <label className="block text-zinc-500 text-[10px] font-bold uppercase mb-1.5">Metode Penyerahan</label>
+                                        <select 
+                                            className="w-full bg-zinc-900 border border-zinc-800 rounded-lg p-2 text-xs text-white focus:outline-none focus:border-[#004aad]"
+                                            value={logFilterDelivery}
+                                            onChange={(e) => setLogFilterDelivery(e.target.value)}
+                                        >
+                                            <option value="Semua">Semua Metode</option>
+                                            <option value="Kirim (Delivery)">Kirim (Delivery)</option>
+                                            <option value="Ambil Sendiri">Ambil Sendiri</option>
+                                        </select>
+                                    </div>
+
+                                    {/* Bike Filter */}
+                                    <div>
+                                        <label className="block text-zinc-500 text-[10px] font-bold uppercase mb-1.5">Model Motor</label>
+                                        <select 
+                                            className="w-full bg-zinc-900 border border-zinc-800 rounded-lg p-2 text-xs text-white focus:outline-none focus:border-[#004aad]"
+                                            value={logFilterBike}
+                                            onChange={(e) => setLogFilterBike(e.target.value)}
+                                        >
+                                            <option value="Semua">Semua Motor</option>
+                                            {uniqueBikesInLogs.map((bike, idx) => (
+                                                <option key={idx} value={bike}>{bike}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+
+                                    {/* Start Date Range */}
+                                    <div>
+                                        <label className="block text-zinc-500 text-[10px] font-bold uppercase mb-1.5">Mulai Dari</label>
+                                        <input 
+                                            type="date"
+                                            className="w-full bg-zinc-900 border border-zinc-800 rounded-lg p-2 text-xs text-white focus:outline-none focus:border-[#004aad]"
+                                            value={logFilterStartDate}
+                                            onChange={(e) => setLogFilterStartDate(e.target.value)}
+                                        />
+                                    </div>
+
+                                    {/* End Date Range */}
+                                    <div>
+                                        <label className="block text-zinc-500 text-[10px] font-bold uppercase mb-1.5">Hingga Tanggal</label>
+                                        <input 
+                                            type="date"
+                                            className="w-full bg-zinc-900 border border-zinc-800 rounded-lg p-2 text-xs text-white focus:outline-none focus:border-[#004aad]"
+                                            value={logFilterEndDate}
+                                            onChange={(e) => setLogFilterEndDate(e.target.value)}
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Reset button */}
+                                {(logFilterSearch || logFilterStatus !== 'Semua' || logFilterDelivery !== 'Semua' || logFilterBike !== 'Semua' || logFilterStartDate || logFilterEndDate) && (
+                                    <div className="flex justify-end mt-4">
+                                        <button 
+                                            onClick={() => {
+                                                setLogFilterSearch('');
+                                                setLogFilterStatus('Semua');
+                                                setLogFilterDelivery('Semua');
+                                                setLogFilterBike('Semua');
+                                                setLogFilterStartDate('');
+                                                setLogFilterEndDate('');
+                                            }}
+                                            className="text-xs text-zinc-400 hover:text-white flex items-center gap-1 bg-zinc-900 hover:bg-zinc-800 px-3 py-1.5 rounded-lg border border-zinc-800 transition-colors cursor-pointer"
+                                        >
+                                            <RefreshCw size={12} />
+                                            <span>Reset Filter</span>
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+
                             {/* Logs list table */}
                             <div className="bg-zinc-950/80 border border-zinc-900 rounded-2xl overflow-hidden shadow-xl">
                                 <div className="p-6 border-b border-zinc-900">
-                                    <h3 className="text-base font-bold text-white">Daftar Transaksi ({logs.length} Tercatat)</h3>
+                                    <h3 className="text-base font-bold text-white">Daftar Transaksi ({filteredLogs.length} Terfilter / {logs.length} Total)</h3>
                                 </div>
 
-                                {logs.length === 0 ? (
-                                    <div className="p-8 text-center text-zinc-500 text-sm">Belum ada transaksi penyewaan yang dicatat.</div>
+                                {filteredLogs.length === 0 ? (
+                                    <div className="p-8 text-center text-zinc-500 text-sm">Tidak ada transaksi sewa yang sesuai dengan filter pencarian.</div>
                                 ) : (
                                     <div className="overflow-x-auto">
                                         <table className="w-full text-left border-collapse text-xs">
@@ -1957,7 +2726,7 @@ export default function AdminPanel({ onClose }) {
                                                 </tr>
                                             </thead>
                                             <tbody className="divide-y divide-zinc-900">
-                                                {logs.map((log) => {
+                                                {filteredLogs.map((log) => {
                                                     const isOverdue = log.status === 'Aktif' && isBookingOverdue(log.endDate, log.endTime);
                                                     const odHours = isOverdue ? getOverdueHours(log.endDate, log.endTime) : 0;
                                                     
@@ -2044,6 +2813,17 @@ export default function AdminPanel({ onClose }) {
                                                                                 <MessageCircle size={14} />
                                                                                 <span className="ml-1 text-[10px] font-bold">Pengingat</span>
                                                                             </a>
+
+                                                                            <button 
+                                                                                onClick={() => {
+                                                                                    setExtendingLog(log);
+                                                                                    handleExtensionHoursChange(24, log.bikeName);
+                                                                                }}
+                                                                                className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500 hover:text-white transition-all font-bold text-[10px]"
+                                                                                title="Perpanjang Sewa Motor"
+                                                                            >
+                                                                                Perpanjang
+                                                                            </button>
 
                                                                             <button 
                                                                                 onClick={() => handleResolveBooking(log.id)}
@@ -2216,6 +2996,38 @@ export default function AdminPanel({ onClose }) {
                                     </button>
                                 </form>
                             </div>
+
+                            {/* Database settings override */}
+                            <div className="bg-zinc-950/80 border border-zinc-900 p-8 rounded-2xl shadow-xl mt-6">
+                                <h3 className="text-base font-bold text-white mb-4">KONEKSI DATABASE SUPABASE</h3>
+                                <div className="space-y-4">
+                                    <div>
+                                        <span className="block text-zinc-500 text-xs font-bold uppercase">Status Koneksi</span>
+                                        <div className="flex items-center gap-2 mt-1">
+                                            <div className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
+                                            <span className="text-sm font-semibold text-zinc-300">Terhubung</span>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <span className="block text-zinc-500 text-xs font-bold uppercase">SUPABASE URL</span>
+                                        <span className="text-sm font-mono text-zinc-400 block truncate mt-1 bg-zinc-900 px-3 py-2 rounded-lg border border-zinc-800" title={dbUrlInput}>
+                                            {dbUrlInput}
+                                        </span>
+                                    </div>
+                                    <button 
+                                        onClick={() => {
+                                            if (window.confirm("Apakah Anda yakin ingin memutuskan koneksi database Supabase dari browser ini?")) {
+                                                localStorage.removeItem('nyetor_supabase_url');
+                                                localStorage.removeItem('nyetor_supabase_anon_key');
+                                                window.location.reload();
+                                            }
+                                        }}
+                                        className="w-full bg-rose-500/10 border border-rose-500/20 text-rose-400 hover:bg-rose-500 hover:text-white transition-all py-2.5 rounded-lg text-sm font-bold tracking-wider cursor-pointer"
+                                    >
+                                        PUTUSKAN KONEKSI DATABASE
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                     )}
                 </main>
@@ -2377,6 +3189,110 @@ export default function AdminPanel({ onClose }) {
                                     TUTUP
                                 </button>
                             </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
+
+            {/* RENT EXTENSION MODAL */}
+            <AnimatePresence>
+                {extendingLog && (
+                    <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-xs flex items-center justify-center p-4">
+                        <motion.div 
+                            initial={{ scale: 0.95, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0.95, opacity: 0 }}
+                            className="bg-zinc-950 border border-zinc-900 w-full max-w-md p-6 rounded-2xl shadow-2xl relative"
+                        >
+                            <div className="flex justify-between items-center mb-6">
+                                <h3 className="text-lg font-black text-white flex items-center gap-2">
+                                    <Clock className="text-[#004aad]" size={20} />
+                                    <span>Perpanjang Durasi Sewa</span>
+                                </h3>
+                                <button 
+                                    onClick={() => setExtendingLog(null)}
+                                    className="p-1 text-zinc-500 hover:text-white transition-colors"
+                                >
+                                    <X size={18} />
+                                </button>
+                            </div>
+
+                            <div className="bg-zinc-900/50 border border-zinc-900 rounded-xl p-4 mb-5 space-y-2 text-xs text-zinc-400">
+                                <div className="flex justify-between">
+                                    <span>Penyewa:</span>
+                                    <strong className="text-zinc-200">{extendingLog.renterName}</strong>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span>Motor / Plat:</span>
+                                    <strong className="text-zinc-200">{extendingLog.bikeName} [{extendingLog.plate}]</strong>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span>Kembali Semula:</span>
+                                    <strong className="text-zinc-300">{extendingLog.endDate} - {extendingLog.endTime}</strong>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span>Durasi Semula:</span>
+                                    <strong className="text-zinc-300">{extendingLog.duration} Jam</strong>
+                                </div>
+                            </div>
+
+                            <form onSubmit={handleSaveExtension} className="space-y-4 text-xs text-left">
+                                <div>
+                                    <label className="block text-zinc-400 text-xs font-semibold mb-2">TAMBAHAN DURASI (JAM)</label>
+                                    <div className="grid grid-cols-3 gap-2 mb-2">
+                                        <button 
+                                            type="button"
+                                            onClick={() => handleExtensionHoursChange(24, extendingLog.bikeName)}
+                                            className={`py-2 rounded-lg font-bold border transition-all ${Number(extensionForm.additionalHours) === 24 ? 'bg-[#004aad] border-[#004aad] text-white' : 'bg-zinc-900 border-zinc-800 text-zinc-400 hover:bg-zinc-800'}`}
+                                        >
+                                            +1 Hari (24j)
+                                        </button>
+                                        <button 
+                                            type="button"
+                                            onClick={() => handleExtensionHoursChange(48, extendingLog.bikeName)}
+                                            className={`py-2 rounded-lg font-bold border transition-all ${Number(extensionForm.additionalHours) === 48 ? 'bg-[#004aad] border-[#004aad] text-white' : 'bg-zinc-900 border-zinc-800 text-zinc-400 hover:bg-zinc-800'}`}
+                                        >
+                                            +2 Hari (48j)
+                                        </button>
+                                        <button 
+                                            type="button"
+                                            onClick={() => handleExtensionHoursChange(72, extendingLog.bikeName)}
+                                            className={`py-2 rounded-lg font-bold border transition-all ${Number(extensionForm.additionalHours) === 72 ? 'bg-[#004aad] border-[#004aad] text-white' : 'bg-zinc-900 border-zinc-800 text-zinc-400 hover:bg-zinc-800'}`}
+                                        >
+                                            +3 Hari (72j)
+                                        </button>
+                                    </div>
+                                    <input 
+                                        type="number"
+                                        min="1"
+                                        className="w-full bg-zinc-900 border border-zinc-800 rounded-lg p-2.5 text-white placeholder-zinc-700 focus:outline-none focus:border-[#004aad]"
+                                        placeholder="Masukkan kustom jam..."
+                                        value={extensionForm.additionalHours}
+                                        onChange={(e) => handleExtensionHoursChange(e.target.value, extendingLog.bikeName)}
+                                        required
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-zinc-400 text-xs font-semibold mb-2">BIAYA TAMBAHAN (RP)</label>
+                                    <input 
+                                        type="number"
+                                        min="0"
+                                        className="w-full bg-zinc-900 border border-zinc-800 rounded-lg p-2.5 text-white placeholder-zinc-700 focus:outline-none focus:border-[#004aad] font-mono text-sm"
+                                        placeholder="Contoh: 70000"
+                                        value={extensionForm.additionalFee}
+                                        onChange={(e) => setExtensionForm({ ...extensionForm, additionalFee: e.target.value })}
+                                        required
+                                    />
+                                </div>
+
+                                <button 
+                                    type="submit" 
+                                    className="w-full btn py-3 text-sm font-bold tracking-wider mt-4 shadow-lg shadow-blue-500/10 cursor-pointer"
+                                >
+                                    PROSES PERPANJANGAN
+                                </button>
+                            </form>
                         </motion.div>
                     </div>
                 )}

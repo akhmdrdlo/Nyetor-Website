@@ -180,7 +180,7 @@ function App() {
       </div>
 
       {/* Global Components */}
-      <InstagramBadge />
+      {view !== 'admin' && <InstagramBadge />}
       <PromoManager />
 
     </div>
