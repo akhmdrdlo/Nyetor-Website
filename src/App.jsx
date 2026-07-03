@@ -12,10 +12,12 @@ import Location from './components/Location';
 import Footer from './components/Footer';
 import InstagramBadge from './components/InstagramBadge';
 import PromoManager from './components/PromoManager';
+import AdminPanel from './components/AdminPanel';
 import './index.css';
 
 // Lib
 import html2pdf from 'html2pdf.js';
+
 
 function App() {
   const [view, setView] = useState('hero'); // hero, catalog, booking, success, invoice_viewer
@@ -119,8 +121,13 @@ function App() {
 
           <Location />
 
-          <Footer />
+          <Footer onAdminClick={() => setView('admin')} />
         </>
+      )}
+
+      {/* Admin Panel Overlay */}
+      {view === 'admin' && (
+        <AdminPanel onClose={() => setView('catalog')} />
       )}
 
       {/* Booking Form Overlay */}
@@ -133,6 +140,7 @@ function App() {
           />
         </div>
       )}
+
 
       {/* Success View (New Redesigned Page) */}
       {view === 'success' && (

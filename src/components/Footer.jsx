@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Instagram, MessageCircle, MapPin } from 'lucide-react';
 
-export default function Footer() {
+export default function Footer({ onAdminClick }) {
     const [currentTime, setCurrentTime] = useState(new Date().getFullYear().toString());
 
     useEffect(() => {
@@ -71,9 +71,18 @@ export default function Footer() {
                 </div>
 
                 <div className="border-t border-gray-800 pt-8 text-center text-gray-500 text-sm">
-                    <p>&copy; {currentTime} Nyetor.id. All rights reserved.</p>
+                    <p>
+                        &copy; {currentTime} Nyetor.id. All rights reserved. |{' '}
+                        <button 
+                            onClick={onAdminClick} 
+                            className="hover:text-white transition-colors cursor-pointer focus:outline-none"
+                        >
+                            Admin Portal
+                        </button>
+                    </p>
                 </div>
             </div>
         </footer>
     );
 }
+

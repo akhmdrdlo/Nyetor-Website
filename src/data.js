@@ -261,3 +261,20 @@ export const catalogData = {
     ],
     seasonal: []
 };
+
+export const SHIPPING_ZONES = [
+    { price: 5000, label: "Zone A (Rp 5.000)", detail: "Manisi & Cipadung" },
+    { price: 7000, label: "Zone B (Rp 7.000)", detail: "Panyilekan & Cimekar" },
+    { price: 10000, label: "Zone C (Rp 10.000)", detail: "Cilengkrang Bawah" },
+    { price: 11000, label: "Zone D (Rp 11.000)", detail: "Ujung Berung & Gedebage" },
+    { price: 13000, label: "Zone E (Rp 13.000)", detail: "Cinunuk & Cilengkrang Atas" },
+    { price: 15000, label: "Zone F (Rp 15.000)", detail: "Cileunyi & St. KCIC Tegalluar" },
+    { price: 20000, label: "Zone G (Rp 20.000)", detail: "Pasir Impun Bawah, Gedebage Dalem, Hotel Cordella" },
+    { price: 25000, label: "Zone H (Rp 25.000)", detail: "Metro, Apt. Panoramic, Pasir Impun Atas" },
+    { price: 30000, label: "Zone I (Rp 30.000)", detail: "St. Kircon, Jatinangor, Rancaekek, Trm. Cicaheum, Gasibu, Gdg Sate" },
+    { price: 35000, label: "Zone J (Rp 35.000)", detail: "Buah Batu" },
+    { price: 40000, label: "Zone K (Rp 40.000)", detail: "St. Bandung, Baltos, Dago Bawah, Dipati Ukur, Cihampelas, Dayeuh Kolot, Moh.Toha, Nagreg" },
+    { price: 50000, label: "Zone L (Rp 50.000)", detail: "St. Cimahi, Pasteur, Banjaran, Dago Atas, Trm. Leuwi Panjang, Pasir Koja" },
+    { price: 60000, label: "Zone M (Rp 60.000)", detail: "St. Padalarang, Soreang, Lembang" }
+];
+

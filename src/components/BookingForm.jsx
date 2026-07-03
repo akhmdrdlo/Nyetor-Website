@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { AlertTriangle, Clock, MapPin, Briefcase, Calendar, AlertCircle, Plus, RefreshCw, Check } from 'lucide-react';
+import { SHIPPING_ZONES } from '../data';
 
 export default function BookingForm({ selectedBike, onCancel, onSubmit }) {
     const [formData, setFormData] = useState({
@@ -32,24 +33,8 @@ export default function BookingForm({ selectedBike, onCancel, onSubmit }) {
     const [totalPrice, setTotalPrice] = useState(0);
     const [shakeDelivery, setShakeDelivery] = useState(false);
 
-    // Shipping Zones Data (Sorted by Price)
-    const SHIPPING_ZONES = [
-        { price: 5000, label: "Zone A (Rp 5.000)", detail: "Manisi & Cipadung" },
-        { price: 7000, label: "Zone B (Rp 7.000)", detail: "Panyilekan & Cimekar" },
-        { price: 10000, label: "Zone C (Rp 10.000)", detail: "Cilengkrang Bawah" },
-        { price: 11000, label: "Zone D (Rp 11.000)", detail: "Ujung Berung & Gedebage" },
-        { price: 13000, label: "Zone E (Rp 13.000)", detail: "Cinunuk & Cilengkrang Atas" },
-        { price: 15000, label: "Zone F (Rp 15.000)", detail: "Cileunyi & St. KCIC Tegalluar" },
-        { price: 20000, label: "Zone G (Rp 20.000)", detail: "Pasir Impun Bawah, Gedebage Dalem, Hotel Cordella" },
-        { price: 25000, label: "Zone H (Rp 25.000)", detail: "Metro, Apt. Panoramic, Pasir Impun Atas" },
-        { price: 30000, label: "Zone I (Rp 30.000)", detail: "St. Kircon, Jatinangor, Rancaekek, Trm. Cicaheum, Gasibu, Gdg Sate" },
-        { price: 35000, label: "Zone J (Rp 35.000)", detail: "Buah Batu" },
-        { price: 40000, label: "Zone K (Rp 40.000)", detail: "St. Bandung, Baltos, Dago Bawah, Dipati Ukur, Cihampelas, Dayeuh Kolot, Moh.Toha, Nagreg" },
-        { price: 50000, label: "Zone L (Rp 50.000)", detail: "St. Cimahi, Pasteur, Banjaran, Dago Atas, Trm. Leuwi Panjang, Pasir Koja" },
-        { price: 60000, label: "Zone M (Rp 60.000)", detail: "St. Padalarang, Soreang, Lembang" },
-    ];
-
     // Helper to get selected zone detail
+
     const selectedZoneDetail = SHIPPING_ZONES.find(z => z.price === formData.selectedZonePrice)?.detail;
 
     // Helper: Add Duration Chunk
