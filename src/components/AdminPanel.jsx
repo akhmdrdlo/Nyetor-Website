@@ -60,19 +60,16 @@ const getHashes = async (text) => {
 const DEFAULT_USER_HASHES = { native: '8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918', fallback: 'fallback_f12fc8e' }; // "admin"
 const DEFAULT_PASS_HASHES = { native: '70ee29669a9898e23a6f837c4608e3f9111cd70c9b14dd69f75d4a1e7b5ef575', fallback: 'fallback_96abb98f' }; // "nyetoradmin"
 
+// CONFIGURATION: Set your Supabase credentials here (or via environment variables)
+const SUPABASE_URL = (import.meta.env && import.meta.env.VITE_SUPABASE_URL) || localStorage.getItem('nyetor_supabase_url') || '';
+const SUPABASE_ANON_KEY = (import.meta.env && import.meta.env.VITE_SUPABASE_ANON_KEY) || localStorage.getItem('nyetor_supabase_anon_key') || '';
+
 // Function to get active Supabase credentials
 const getSupabaseCredentials = () => {
-    const localUrl = localStorage.getItem('nyetor_supabase_url') || '';
-    const localKey = localStorage.getItem('nyetor_supabase_anon_key') || '';
-    
-    // Check vite env config
-    const envUrl = (import.meta.env && import.meta.env.VITE_SUPABASE_URL) || '';
-    const envKey = (import.meta.env && import.meta.env.VITE_SUPABASE_ANON_KEY) || '';
-
     return {
-        url: localUrl || envUrl,
-        key: localKey || envKey,
-        isConfigured: !!(localUrl || envUrl) && !!(localKey || envKey)
+        url: SUPABASE_URL,
+        key: SUPABASE_ANON_KEY,
+        isConfigured: !!SUPABASE_URL && !!SUPABASE_ANON_KEY
     };
 };
 
@@ -89,10 +86,7 @@ if (creds.isConfigured) {
 
 export default function AdminPanel({ onClose }) {
     // Supabase Config States
-    const [isDbConfigured, setIsDbConfigured] = useState(creds.isConfigured);
-    const [dbUrlInput, setDbUrlInput] = useState(creds.url);
-    const [dbKeyInput, setDbKeyInput] = useState(creds.key);
-    const [isDbConnecting, setIsDbConnecting] = useState(false);
+    const isDbConfigured = creds.isConfigured;
     const [isLoading, setIsLoading] = useState(false);
 
     // Auth State
@@ -176,29 +170,7 @@ export default function AdminPanel({ onClose }) {
     });
     const [settingsMsg, setSettingsMsg] = useState({ text: '', type: 'success' });
 
-    // Setup Supabase locally from UI Form
-    const handleConnectDb = async (e) => {
-        e.preventDefault();
-        setIsDbConnecting(true);
-        try {
-            const tempClient = createClient(dbUrlInput.trim(), dbKeyInput.trim());
-            // Test query configs table
-            const { error } = await tempClient.from('nyetor_config').select('key').limit(1);
-            if (error) throw error;
 
-            // Success, save locally
-            localStorage.setItem('nyetor_supabase_url', dbUrlInput.trim());
-            localStorage.setItem('nyetor_supabase_anon_key', dbKeyInput.trim());
-            
-            alert('Sukses terhubung ke database cloud Supabase!');
-            window.location.reload();
-        } catch (err) {
-            console.error(err);
-            alert('Koneksi gagal! Silakan periksa kembali URL dan Anon Key Anda. Pastikan tabel "nyetor_config" telah dibuat di Supabase.');
-        } finally {
-            setIsDbConnecting(false);
-        }
-    };
 
     // Load data from Supabase
     const loadFromSupabase = async () => {
@@ -1386,87 +1358,7 @@ export default function AdminPanel({ onClose }) {
         return 'Tersedia';
     };
 
-    // RENDER DATABASE SETUP SCREEN IF NOT CONFIGURED
-    if (!isDbConfigured) {
-        return (
-            <div className="fixed inset-0 z-50 bg-black text-white flex items-center justify-center p-4">
-                {/* Background Parallax Image like Hero section */}
-                <div className="absolute inset-0 z-0">
-                    <img
-                        src="/bandung.png"
-                        alt="Bandung City View"
-                        className="w-full h-full object-cover opacity-60"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/10 to-[#07070a] z-10" />
-                </div>
-                
-                {/* Configuration Card */}
-                <div className="relative z-20 w-full max-w-md bg-zinc-950/75 border border-zinc-800/80 backdrop-blur-xl p-8 rounded-2xl shadow-2xl">
-                    <div className="text-center mb-6">
-                        <img src="/Nyetor Logo Transparent.png" alt="Nyetor Logo" className="h-16 mx-auto mb-4 brightness-200" />
-                        <h2 className="text-xl font-black text-white tracking-tight uppercase">SETUP DATABASE SUPABASE</h2>
-                        <p className="text-zinc-400 text-xs mt-1">Langkah awal untuk sinkronisasi multi-user secara real-time</p>
-                    </div>
 
-                    <form onSubmit={handleConnectDb} className="space-y-4">
-                        <div>
-                            <label className="block text-zinc-300 text-xs font-semibold mb-2">SUPABASE URL</label>
-                            <input 
-                                type="url" 
-                                className="w-full bg-zinc-900/80 border border-zinc-800 rounded-lg py-2 px-3 text-white placeholder-zinc-600 focus:outline-none focus:border-[#004aad] text-sm"
-                                placeholder="https://xxxxxx.supabase.co"
-                                value={dbUrlInput}
-                                onChange={(e) => setDbUrlInput(e.target.value)}
-                                required
-                            />
-                        </div>
-
-                        <div>
-                            <label className="block text-zinc-300 text-xs font-semibold mb-2">SUPABASE ANON KEY</label>
-                            <input 
-                                type="password" 
-                                className="w-full bg-zinc-900/80 border border-zinc-800 rounded-lg py-2 px-3 text-white placeholder-zinc-600 focus:outline-none focus:border-[#004aad] text-sm"
-                                placeholder="Masukkan Public Anon Key..."
-                                value={dbKeyInput}
-                                onChange={(e) => setDbKeyInput(e.target.value)}
-                                required
-                            />
-                        </div>
-
-                        <button 
-                            type="submit" 
-                            disabled={isDbConnecting}
-                            className="w-full btn py-2.5 text-sm font-bold tracking-wider mt-4 shadow-lg shadow-blue-500/10 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-55"
-                        >
-                            {isDbConnecting ? 'MENHUBUNGKAN...' : 'SIMPAN & HUBUNGKAN'}
-                        </button>
-                    </form>
-
-                    <div className="mt-6 border-t border-zinc-900 pt-4 text-center">
-                        <p className="text-[10px] text-zinc-500 text-left mb-3 leading-relaxed">
-                            * Pastikan Anda sudah membuat tabel database di Supabase SQL Editor dengan SQL setup script.
-                        </p>
-                        <div className="flex flex-col gap-2.5">
-                            <a 
-                                href="file:///C:/Users/Lenovo/.gemini/antigravity-ide/brain/5ff05edb-f322-45fc-afda-04c4c6468953/supabase_setup.sql"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-xs text-blue-400 hover:text-blue-300 transition-colors underline block"
-                            >
-                                Lihat/Unduh SQL Setup Script
-                            </a>
-                            <button 
-                                onClick={onClose}
-                                className="text-zinc-500 text-xs hover:text-white transition-colors cursor-pointer block mt-1"
-                            >
-                                Kembali ke Website
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        );
-    }
 
     // RENDER LOGIN SCREEN IF NOT AUTHENTICATED
     if (!isLoggedIn) {
@@ -1491,6 +1383,15 @@ export default function AdminPanel({ onClose }) {
                     </div>
 
                     <form onSubmit={handleLogin} className="space-y-5">
+                        {!creds.isConfigured && (
+                            <div className="bg-amber-500/10 border border-amber-500/20 text-amber-400 p-3 rounded-lg flex items-center gap-2 text-[11px] leading-relaxed mb-4">
+                                <AlertTriangle size={18} className="shrink-0 text-amber-400" />
+                                <span>
+                                    <strong>Dev Note:</strong> Supabase URL & Anon Key belum diatur di file <code>.env</code>. Silakan lihat instruksi di file <code>walkthrough.md</code>.
+                                </span>
+                            </div>
+                        )}
+
                         {authError && (
                             <div className="bg-rose-500/10 border border-rose-500/20 text-rose-400 p-3 rounded-lg flex items-center gap-2 text-sm">
                                 <AlertTriangle size={18} className="shrink-0 animate-bounce" />
@@ -3004,28 +2905,19 @@ export default function AdminPanel({ onClose }) {
                                     <div>
                                         <span className="block text-zinc-500 text-xs font-bold uppercase">Status Koneksi</span>
                                         <div className="flex items-center gap-2 mt-1">
-                                            <div className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
-                                            <span className="text-sm font-semibold text-zinc-300">Terhubung</span>
+                                            <div className={`w-2.5 h-2.5 rounded-full ${creds.isConfigured ? 'bg-emerald-500' : 'bg-rose-500'}`} />
+                                            <span className="text-sm font-semibold text-zinc-300">{creds.isConfigured ? 'Terhubung (Statis)' : 'Belum Dikonfigurasi'}</span>
                                         </div>
                                     </div>
                                     <div>
                                         <span className="block text-zinc-500 text-xs font-bold uppercase">SUPABASE URL</span>
-                                        <span className="text-sm font-mono text-zinc-400 block truncate mt-1 bg-zinc-900 px-3 py-2 rounded-lg border border-zinc-800" title={dbUrlInput}>
-                                            {dbUrlInput}
+                                        <span className="text-sm font-mono text-zinc-400 block truncate mt-1 bg-zinc-900 px-3 py-2 rounded-lg border border-zinc-800" title={creds.url}>
+                                            {creds.url || 'Tidak dikonfigurasi'}
                                         </span>
                                     </div>
-                                    <button 
-                                        onClick={() => {
-                                            if (window.confirm("Apakah Anda yakin ingin memutuskan koneksi database Supabase dari browser ini?")) {
-                                                localStorage.removeItem('nyetor_supabase_url');
-                                                localStorage.removeItem('nyetor_supabase_anon_key');
-                                                window.location.reload();
-                                            }
-                                        }}
-                                        className="w-full bg-rose-500/10 border border-rose-500/20 text-rose-400 hover:bg-rose-500 hover:text-white transition-all py-2.5 rounded-lg text-sm font-bold tracking-wider cursor-pointer"
-                                    >
-                                        PUTUSKAN KONEKSI DATABASE
-                                    </button>
+                                    <p className="text-[10px] text-zinc-500 leading-relaxed">
+                                        * Koneksi database diatur secara internal oleh developer melalui file <code>.env</code> di server.
+                                    </p>
                                 </div>
                             </div>
                         </div>
