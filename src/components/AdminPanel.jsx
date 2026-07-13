@@ -29,7 +29,9 @@ import {
     MessageCircle,
     Info,
     DollarSign,
-    FileText
+    FileText,
+    Sun,
+    Moon
 } from 'lucide-react';
 import { catalogData, SHIPPING_ZONES } from '../data';
 
@@ -119,6 +121,7 @@ export default function AdminPanel({ onClose }) {
     });
     const [settingsMsg, setSettingsMsg] = useState({ text: '', type: 'success' });
     const [dbPricing, setDbPricing] = useState([]);
+    const [theme, setTheme] = useState(() => localStorage.getItem('adminTheme') || 'dark');
 
 
 
@@ -370,8 +373,8 @@ export default function AdminPanel({ onClose }) {
         const container = document.createElement('div');
         container.style.cssText = `
             width: 794px;
-            background-color: #020713;
-            color: #ffffff;
+            background-color: #ffffff;
+            color: #111827;
             font-family: 'Inter', -apple-system, sans-serif;
             padding: 0;
             box-sizing: border-box;
@@ -405,7 +408,7 @@ export default function AdminPanel({ onClose }) {
             const header = document.createElement('div');
             header.style.cssText = 'text-align: center; margin-bottom: 30px; display: flex; flex-direction: column; align-items: center; gap: 15px;';
             header.innerHTML = `
-                <img src="/Nyetor Logo Transparent.png" style="height: 60px; filter: brightness(200%);" />
+                <img src="/Nyetor Logo Transparent.png" style="height: 60px;" />
                 <div style="display: inline-block; transform: skewX(-15deg); background-color: #004aad; border: 2px solid #ffffff; padding: 10px 40px; box-shadow: 0 4px 15px rgba(0,74,173,0.3);">
                     <h2 style="margin: 0; font-size: 24px; font-weight: 900; color: #ffffff; text-transform: uppercase; transform: skewX(15deg); letter-spacing: 2px; text-shadow: 2px 2px 4px rgba(0,0,0,0.5);">
                         ${categoryLabels[catId]}
@@ -433,7 +436,7 @@ export default function AdminPanel({ onClose }) {
                 const secondaries = [];
                 Object.entries(prices).forEach(([h, p]) => {
                     if (h !== mainHours) {
-                        secondaries.push(`<div style="font-size: 13px; font-weight: bold; color: rgba(255,255,255,0.7);">${h} Jam : ${(p/1000).toFixed(0)}.000</div>`);
+                        secondaries.push(`<div style="font-size: 13px; font-weight: bold; color: #4b5563;">${h} Jam : ${(p/1000).toFixed(0)}.000</div>`);
                     }
                 });
 
@@ -450,24 +453,24 @@ export default function AdminPanel({ onClose }) {
                 card.style.cssText = `
                     display: flex;
                     flex-direction: ${isEven ? 'row' : 'row-reverse'};
-                    background: linear-gradient(135deg, #091a3a 0%, #030a1b 100%);
+                    background-color: #ffffff;
                     border-radius: 20px;
-                    border: 1px solid rgba(255, 255, 255, 0.08);
+                    border: 1px solid #e5e7eb;
                     overflow: hidden;
                     height: 140px;
                     align-items: center;
-                    box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+                    box-shadow: 0 4px 15px rgba(0,0,0,0.05);
                 `;
 
                 card.innerHTML = `
                     <!-- Image Block -->
                     <div style="width: 38%; height: 100%; display: flex; align-items: center; justify-content: center; overflow: hidden; padding: 10px;">
-                        <img src="${bike.image || '/bandung.png'}" style="max-height: 100%; max-width: 100%; object-fit: contain; filter: drop-shadow(0 8px 12px rgba(0,0,0,0.5));" />
+                        <img src="${bike.image || '/bandung.png'}" style="max-height: 100%; max-width: 100%; object-fit: contain; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.1));" />
                     </div>
                     
                     <!-- Info Block -->
                     <div style="width: 62%; padding: 15px; display: flex; flex-direction: column; justify-content: center; text-align: ${isEven ? 'left' : 'right'}; align-items: ${isEven ? 'flex-start' : 'flex-end'};">
-                        <h4 style="margin: 0 0 6px 0; font-size: 16px; font-weight: 800; color: #ffffff; text-transform: uppercase; letter-spacing: 0.5px;">
+                        <h4 style="margin: 0 0 6px 0; font-size: 16px; font-weight: 800; color: #111827; text-transform: uppercase; letter-spacing: 0.5px;">
                             ${bike.name}
                         </h4>
                         
@@ -475,16 +478,16 @@ export default function AdminPanel({ onClose }) {
                         <div style="display: flex; flex-direction: ${isEven ? 'row' : 'row-reverse'}; align-items: center; gap: 15px;">
                             <!-- Large Main Price -->
                             <div style="display: flex; flex-direction: column; align-items: ${isEven ? 'flex-start' : 'flex-end'};">
-                                <span style="font-size: 9px; font-weight: 900; color: #3b82f6; text-transform: uppercase; letter-spacing: 0.5px;">
+                                <span style="font-size: 9px; font-weight: 900; color: #004aad; text-transform: uppercase; letter-spacing: 0.5px;">
                                     ${mainHours} JAM
                                 </span>
-                                <span style="font-size: 22px; font-weight: 900; color: #ffffff; line-height: 1.1;">
+                                <span style="font-size: 22px; font-weight: 900; color: #111827; line-height: 1.1;">
                                     ${mainPriceVal}
                                 </span>
                             </div>
                             
                             <!-- Divider -->
-                            <div style="width: 1px; height: 35px; background-color: rgba(255,255,255,0.15);"></div>
+                            <div style="width: 1px; height: 35px; background-color: #e5e7eb;"></div>
                             
                             <!-- Secondary Prices -->
                             <div style="display: flex; flex-direction: column; gap: 1px; text-align: ${isEven ? 'left' : 'right'};">
@@ -503,7 +506,7 @@ export default function AdminPanel({ onClose }) {
 
             // Page footer note
             const footer = document.createElement('div');
-            footer.style.cssText = 'text-align: center; font-size: 10px; color: rgba(255,255,255,0.4); margin-top: auto; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 15px;';
+            footer.style.cssText = 'text-align: center; font-size: 10px; color: #6b7280; margin-top: auto; border-top: 1px solid #e5e7eb; padding-top: 15px;';
             footer.innerHTML = '* Syarat & Ketentuan Berlaku • Sewa 3 Jam Wajib Ambil di Garasi • Hubungi CS Nyetor untuk Booking';
             page.appendChild(footer);
 
@@ -522,7 +525,7 @@ export default function AdminPanel({ onClose }) {
             margin:       0,
             filename:     'pricelist_nyetor_motor.pdf',
             image:        { type: 'jpeg', quality: 0.98 },
-            html2canvas:  { scale: 2, useCORS: true, letterRendering: true, backgroundColor: '#020713' },
+            html2canvas:  { scale: 2, useCORS: true, letterRendering: true, backgroundColor: '#ffffff' },
             jsPDF:        { unit: 'pt', format: 'a4', orientation: 'portrait' }
         };
 
@@ -1628,14 +1631,120 @@ export default function AdminPanel({ onClose }) {
 
     // MAIN ADMIN PANEL VIEW
     return (
-        <div className="fixed inset-0 z-50 bg-[#07070a] text-zinc-300 flex flex-col font-sans overflow-hidden">
+        <div className={`fixed inset-0 z-50 flex flex-col font-sans overflow-hidden transition-colors duration-300 ${
+            theme === 'light' 
+                ? 'light-mode-active bg-gray-50 text-gray-800' 
+                : 'bg-[#07070a] text-zinc-300'
+        }`}>
+            <style>{`
+                .light-mode-active {
+                    --bg-main: #f3f4f6;
+                    --bg-card: #ffffff;
+                    --border-color: #e5e7eb;
+                    --text-main: #111827;
+                    --text-muted: #4b5563;
+                    --text-light: #6b7280;
+                }
+                
+                /* Standard tags overrides */
+                .light-mode-active,
+                .light-mode-active main,
+                .light-mode-active aside {
+                    background-color: var(--bg-main) !important;
+                    color: var(--text-main) !important;
+                }
+                
+                .light-mode-active header {
+                    background-color: #ffffff !important;
+                    border-color: var(--border-color) !important;
+                    color: var(--text-main) !important;
+                }
+                
+                /* Wildcard selectors to target Tailwind classes without backslash syntax problems */
+                .light-mode-active div[class*="bg-zinc-"],
+                .light-mode-active div[class*="bg-[#"],
+                .light-mode-active form[class*="bg-zinc-"],
+                .light-mode-active form[class*="bg-[#"],
+                .light-mode-active nav[class*="bg-zinc-"],
+                .light-mode-active button[class*="bg-zinc-"] {
+                    background-color: var(--bg-card) !important;
+                    border-color: var(--border-color) !important;
+                    color: var(--text-main) !important;
+                }
+                
+                .light-mode-active h1,
+                .light-mode-active h2,
+                .light-mode-active h3,
+                .light-mode-active h4,
+                .light-mode-active th {
+                    color: var(--text-main) !important;
+                }
+                
+                .light-mode-active span[class*="text-zinc-"],
+                .light-mode-active p[class*="text-zinc-"],
+                .light-mode-active label[class*="text-zinc-"],
+                .light-mode-active div[class*="text-zinc-"] {
+                    color: var(--text-muted) !important;
+                }
+                
+                .light-mode-active input,
+                .light-mode-active select,
+                .light-mode-active textarea {
+                    background-color: #ffffff !important;
+                    color: #111827 !important;
+                    border-color: #d1d5db !important;
+                }
+                
+                .light-mode-active input::placeholder,
+                .light-mode-active select::placeholder,
+                .light-mode-active textarea::placeholder {
+                    color: #9ca3af !important;
+                }
+                
+                /* Calendar grid cell override */
+                .light-mode-active .calendar-grid-cell,
+                .light-mode-active div[class*="border-zinc-"] {
+                    border-color: var(--border-color) !important;
+                }
+                
+                /* Keep the primary blue background buttons working */
+                .light-mode-active button[class*="bg-[#004aad]"],
+                .light-mode-active .bg-\\[\\#004aad\\] {
+                    background-color: #004aad !important;
+                    color: #ffffff !important;
+                }
+                
+                /* Keep the primary gradient buttons working */
+                .light-mode-active .btn {
+                    color: #ffffff !important;
+                }
+                
+                /* Fix hover states for sidebar items */
+                .light-mode-active aside button:hover {
+                    background-color: #e5e7eb !important;
+                    color: #111827 !important;
+                }
+
+                /* Overrides for tag badges (spans) in light mode */
+                .light-mode-active span[class*="bg-zinc-"] {
+                    background-color: #e5e7eb !important;
+                    border-color: #d1d5db !important;
+                    color: #374151 !important;
+                }
+                .light-mode-active span[class*="bg-amber-"] {
+                    background-color: #fef3c7 !important;
+                    border-color: #fde68a !important;
+                    color: #b45309 !important;
+                }
+            `}</style>
+
             {/* Header */}
             <header className="bg-zinc-950 border-b border-zinc-900 px-4 md:px-6 py-4 flex items-center justify-between shrink-0">
                 <div className="flex items-center gap-2 md:gap-3">
                     {/* Hamburger Button for Mobile */}
                     <button 
                         onClick={() => setIsMobileSidebarOpen(true)}
-                        className="p-1 text-zinc-400 hover:text-white md:hidden focus:outline-none"
+                        className="p-1.5 text-zinc-400 hover:text-white md:hidden hover:bg-zinc-900 rounded-lg transition-colors cursor-pointer"
                         title="Buka Menu"
                     >
                         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1644,7 +1753,7 @@ export default function AdminPanel({ onClose }) {
                     </button>
 
                     {/* Logo: Large on Desktop, NY on Mobile */}
-                    <img src="/Nyetor Logo Transparent.png" alt="Nyetor Logo" className="h-10 brightness-200 hidden md:block" />
+                    <img src="/Nyetor Logo Transparent.png" alt="Nyetor Logo" className={`h-10 hidden md:block ${theme === 'dark' ? 'brightness-200' : ''}`} />
                     <span className="md:hidden font-black text-2xl text-[#004aad] tracking-tighter">NY</span>
 
                     <div className="h-6 w-[1px] bg-zinc-800 hidden md:block" />
@@ -1653,6 +1762,17 @@ export default function AdminPanel({ onClose }) {
                     </span>
                 </div>
                 <div className="flex items-center gap-2 md:gap-4">
+                    <button 
+                        onClick={() => {
+                            const newTheme = theme === 'dark' ? 'light' : 'dark';
+                            setTheme(newTheme);
+                            localStorage.setItem('adminTheme', newTheme);
+                        }}
+                        className="text-zinc-400 hover:text-[#004aad] p-2 rounded-lg transition-colors cursor-pointer flex items-center justify-center"
+                        title={theme === 'dark' ? "Mode Terang" : "Mode Gelap"}
+                    >
+                        {theme === 'dark' ? <Sun size={18} className="text-amber-400" /> : <Moon size={18} className="text-indigo-400" />}
+                    </button>
                     <button 
                         onClick={onClose} 
                         className="text-zinc-400 hover:text-white text-xs md:text-sm font-medium transition-colors"
