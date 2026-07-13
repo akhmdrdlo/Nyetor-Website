@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
-import { createClient } from '@supabase/supabase-js';
+import { supabase, creds } from '../supabaseClient';
 import { motion, AnimatePresence } from 'framer-motion';
+import html2pdf from 'html2pdf.js';
 import { 
     Calendar as CalendarIcon, 
     Clock, 
@@ -26,63 +27,11 @@ import {
     ChevronLeft, 
     ChevronRight,
     MessageCircle,
-    Info
+    Info,
+    DollarSign,
+    FileText
 } from 'lucide-react';
 import { catalogData, SHIPPING_ZONES } from '../data';
-
-// Native & Fallback Hashing Helpers for database-free encryption
-const getHashes = async (text) => {
-    // 1. Native SHA-256 Hash
-    let nativeHash = '';
-    try {
-        if (window.crypto && window.crypto.subtle) {
-            const encoder = new TextEncoder();
-            const data = encoder.encode(text);
-            const hashBuffer = await window.crypto.subtle.digest('SHA-256', data);
-            const hashArray = Array.from(new Uint8Array(hashBuffer));
-            nativeHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-        }
-    } catch (e) {
-        console.warn("Native crypto subtle not available, using fallback", e);
-    }
-    
-    // 2. Simple fallback hash for non-HTTPS / non-secure contexts
-    let fallbackHash = 5381;
-    for (let i = 0; i < text.length; i++) {
-        fallbackHash = ((fallbackHash << 5) + fallbackHash) + text.charCodeAt(i);
-    }
-    const fallbackStr = 'fallback_' + (fallbackHash >>> 0).toString(16);
-
-    return { native: nativeHash, fallback: fallbackStr };
-};
-
-// Default Credentials
-const DEFAULT_USER_HASHES = { native: '8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918', fallback: 'fallback_f12fc8e' }; // "admin"
-const DEFAULT_PASS_HASHES = { native: '70ee29669a9898e23a6f837c4608e3f9111cd70c9b14dd69f75d4a1e7b5ef575', fallback: 'fallback_96abb98f' }; // "nyetoradmin"
-
-// CONFIGURATION: Set your Supabase credentials here (or via environment variables)
-const SUPABASE_URL = (import.meta.env && import.meta.env.VITE_SUPABASE_URL) || localStorage.getItem('nyetor_supabase_url') || '';
-const SUPABASE_ANON_KEY = (import.meta.env && import.meta.env.VITE_SUPABASE_ANON_KEY) || localStorage.getItem('nyetor_supabase_anon_key') || '';
-
-// Function to get active Supabase credentials
-const getSupabaseCredentials = () => {
-    return {
-        url: SUPABASE_URL,
-        key: SUPABASE_ANON_KEY,
-        isConfigured: !!SUPABASE_URL && !!SUPABASE_ANON_KEY
-    };
-};
-
-// Create client dynamically
-let supabase = null;
-const creds = getSupabaseCredentials();
-if (creds.isConfigured) {
-    try {
-        supabase = createClient(creds.url, creds.key);
-    } catch (e) {
-        console.error("Failed to initialize Supabase client:", e);
-    }
-}
 
 export default function AdminPanel({ onClose }) {
     // Supabase Config States
@@ -169,6 +118,7 @@ export default function AdminPanel({ onClose }) {
         confirmNewPassword: ''
     });
     const [settingsMsg, setSettingsMsg] = useState({ text: '', type: 'success' });
+    const [dbPricing, setDbPricing] = useState([]);
 
 
 
@@ -194,6 +144,14 @@ export default function AdminPanel({ onClose }) {
                 .order('created_at', { ascending: false });
                 
             if (logsErr) throw logsErr;
+
+            // Fetch Pricing
+            const { data: pricingData, error: pricingErr } = await supabase
+                .from('nyetor_pricing')
+                .select('*')
+                .order('name', { ascending: true });
+
+            if (pricingErr) throw pricingErr;
 
             // Map fleet rows
             const mappedFleet = (fleetData || []).map(row => ({
@@ -234,6 +192,7 @@ export default function AdminPanel({ onClose }) {
 
             setFleet(mappedFleet);
             setLogs(mappedLogs);
+            setDbPricing(pricingData || []);
         } catch (err) {
             console.error("Failed to load from Supabase:", err);
         } finally {
@@ -243,11 +202,29 @@ export default function AdminPanel({ onClose }) {
 
     // Load initial authentication states & fetch Supabase data
     useEffect(() => {
-        // Auth status persistence
-        const sessionAuth = sessionStorage.getItem('nyetor_admin_session');
-        if (sessionAuth === 'true') {
-            setIsLoggedIn(true);
-        }
+        if (!supabase) return;
+
+        // Check active session
+        supabase.auth.getSession().then(({ data: { session } }) => {
+            if (session) {
+                setIsLoggedIn(true);
+            }
+        });
+
+        // Listen for auth changes
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+            if (session) {
+                setIsLoggedIn(true);
+            } else {
+                setIsLoggedIn(false);
+            }
+        });
+
+        return () => {
+            if (subscription) {
+                subscription.unsubscribe();
+            }
+        };
     }, []);
 
     // Realtime changes listener subscription
@@ -272,9 +249,18 @@ export default function AdminPanel({ onClose }) {
             })
             .subscribe();
 
+        // Subscribe to changes in pricing
+        const pricingChannel = supabase
+            .channel('pricing-changes')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'nyetor_pricing' }, () => {
+                loadFromSupabase();
+            })
+            .subscribe();
+
         return () => {
             supabase.removeChannel(fleetChannel);
             supabase.removeChannel(logsChannel);
+            supabase.removeChannel(pricingChannel);
         };
     }, [isLoggedIn]);
 
@@ -289,48 +275,30 @@ export default function AdminPanel({ onClose }) {
         }
 
         try {
-            // Fetch credentials config table
-            const { data: configData, error: configError } = await supabase
-                .from('nyetor_config')
-                .select('*');
-
-            if (configError) throw configError;
-
-            const configMap = {};
-            (configData || []).forEach(row => {
-                configMap[row.key] = row.value;
+            const { data, error } = await supabase.auth.signInWithPassword({
+                email: usernameInput.trim(),
+                password: passwordInput
             });
 
-            const inputUserHashes = await getHashes(usernameInput.trim());
-            const inputPassHashes = await getHashes(passwordInput);
+            if (error) throw error;
 
-            const storedUserHash = configMap['admin_user_hash'] || DEFAULT_USER_HASHES.native;
-            const storedUserFallback = configMap['admin_user_fallback'] || DEFAULT_USER_HASHES.fallback;
-            const storedPassHash = configMap['admin_pass_hash'] || DEFAULT_PASS_HASHES.native;
-            const storedPassFallback = configMap['admin_pass_fallback'] || DEFAULT_PASS_HASHES.fallback;
-
-            const isUserValid = (inputUserHashes.native === storedUserHash) || (inputUserHashes.fallback === storedUserFallback);
-            const isPassValid = (inputPassHashes.native === storedPassHash) || (inputPassHashes.fallback === storedPassFallback);
-
-            if (isUserValid && isPassValid) {
-                setIsLoggedIn(true);
-                sessionStorage.setItem('nyetor_admin_session', 'true');
-            } else {
-                setAuthError('Username atau Password salah!');
-            }
+            setIsLoggedIn(true);
         } catch (err) {
             console.error("Login verification failed:", err);
-            setAuthError('Koneksi database gagal: ' + err.message);
+            setAuthError('Email atau Password salah! ' + err.message);
         }
     };
 
     // Handle Logout
-    const handleLogout = () => {
+    const handleLogout = async () => {
+        if (supabase) {
+            await supabase.auth.signOut();
+        }
         setIsLoggedIn(false);
-        sessionStorage.removeItem('nyetor_admin_session');
     };
 
     // Change Password
+    // Change Password / Email
     const handleUpdateSettings = async (e) => {
         e.preventDefault();
         setSettingsMsg({ text: '', type: 'success' });
@@ -341,47 +309,28 @@ export default function AdminPanel({ onClose }) {
         }
 
         try {
-            // Fetch credentials
-            const { data: configData, error: configErr } = await supabase.from('nyetor_config').select('*');
-            if (configErr) throw configErr;
-
-            const configMap = {};
-            (configData || []).forEach(row => {
-                configMap[row.key] = row.value;
-            });
-
-            const currentPassHashes = await getHashes(settingsForm.currentPassword);
-            const storedPassHash = configMap['admin_pass_hash'] || DEFAULT_PASS_HASHES.native;
-            const storedPassFallback = configMap['admin_pass_fallback'] || DEFAULT_PASS_HASHES.fallback;
-
-            const isCurrentValid = (currentPassHashes.native === storedPassHash) || (currentPassHashes.fallback === storedPassFallback);
-            if (!isCurrentValid) {
-                setSettingsMsg({ text: 'Password saat ini salah!', type: 'error' });
-                return;
-            }
-
             if (settingsForm.newPassword && settingsForm.newPassword !== settingsForm.confirmNewPassword) {
                 setSettingsMsg({ text: 'Konfirmasi password baru tidak cocok!', type: 'error' });
                 return;
             }
 
-            if (settingsForm.newUsername.trim()) {
-                const userHashes = await getHashes(settingsForm.newUsername.trim());
-                await supabase.from('nyetor_config').upsert([
-                    { key: 'admin_user_hash', value: userHashes.native },
-                    { key: 'admin_user_fallback', value: userHashes.fallback }
-                ]);
-            }
-
+            const updates = {};
             if (settingsForm.newPassword) {
-                const passHashes = await getHashes(settingsForm.newPassword);
-                await supabase.from('nyetor_config').upsert([
-                    { key: 'admin_pass_hash', value: passHashes.native },
-                    { key: 'admin_pass_fallback', value: passHashes.fallback }
-                ]);
+                updates.password = settingsForm.newPassword;
+            }
+            if (settingsForm.newUsername.trim()) {
+                updates.email = settingsForm.newUsername.trim();
             }
 
-            setSettingsMsg({ text: 'Kredensial berhasil diperbarui di cloud database!', type: 'success' });
+            if (Object.keys(updates).length === 0) {
+                setSettingsMsg({ text: 'Tidak ada data perubahan yang diisi!', type: 'error' });
+                return;
+            }
+
+            const { error } = await supabase.auth.updateUser(updates);
+            if (error) throw error;
+
+            setSettingsMsg({ text: 'Kredensial berhasil diperbarui di Supabase Auth!', type: 'success' });
             setSettingsForm({
                 currentPassword: '',
                 newUsername: '',
@@ -390,8 +339,194 @@ export default function AdminPanel({ onClose }) {
             });
         } catch (err) {
             console.error("Settings update failed:", err);
-            setSettingsMsg({ text: 'Gagal memperbarui di database: ' + err.message, type: 'error' });
+            setSettingsMsg({ text: 'Gagal memperbarui: ' + err.message, type: 'error' });
         }
+    };
+
+    // Save motorbike price rates row to Supabase
+    const handleSavePriceRow = async (bikeId, prices, isAdditional, category) => {
+        if (!supabase) return;
+        try {
+            const { error } = await supabase
+                .from('nyetor_pricing')
+                .update({ 
+                    prices, 
+                    is_additional: isAdditional,
+                    category: category
+                })
+                .eq('id', bikeId);
+            
+            if (error) throw error;
+            alert('Tarif unit berhasil diperbarui!');
+            loadFromSupabase();
+        } catch (e) {
+            console.error(e);
+            alert('Gagal memperbarui tarif: ' + e.message);
+        }
+    };
+
+    // Generate price list brochure PDF matching the slanted flyer design
+    const generatePricingPDF = () => {
+        const container = document.createElement('div');
+        container.style.cssText = `
+            width: 794px;
+            background-color: #020713;
+            color: #ffffff;
+            font-family: 'Inter', -apple-system, sans-serif;
+            padding: 0;
+            box-sizing: border-box;
+        `;
+
+        const categoryLabels = {
+            unit_bebek: 'UNIT BEBEK',
+            super_ekonomis: 'SUPER EKONOMIS',
+            ekonomis: 'EKONOMIS UNIT',
+            silver: 'SILVER UNIT',
+            unit_tambahan: 'UNIT TAMBAHAN'
+        };
+
+        const categoriesToPrint = ['super_ekonomis', 'unit_bebek', 'ekonomis', 'silver', 'unit_tambahan'];
+
+        categoriesToPrint.forEach((catId, pageIdx) => {
+            const list = dbPricing.filter(b => b.category === catId);
+            if (list.length === 0) return;
+
+            const page = document.createElement('div');
+            page.style.cssText = `
+                padding: 40px;
+                box-sizing: border-box;
+                min-height: 1120px;
+                position: relative;
+                display: flex;
+                flex-direction: column;
+            `;
+
+            // Header: Logo & Title
+            const header = document.createElement('div');
+            header.style.cssText = 'text-align: center; margin-bottom: 30px; display: flex; flex-direction: column; align-items: center; gap: 15px;';
+            header.innerHTML = `
+                <img src="/Nyetor Logo Transparent.png" style="height: 60px; filter: brightness(200%);" />
+                <div style="display: inline-block; transform: skewX(-15deg); background-color: #004aad; border: 2px solid #ffffff; padding: 10px 40px; box-shadow: 0 4px 15px rgba(0,74,173,0.3);">
+                    <h2 style="margin: 0; font-size: 24px; font-weight: 900; color: #ffffff; text-transform: uppercase; transform: skewX(15deg); letter-spacing: 2px; text-shadow: 2px 2px 4px rgba(0,0,0,0.5);">
+                        ${categoryLabels[catId]}
+                    </h2>
+                </div>
+            `;
+            page.appendChild(header);
+
+            // Grid container for cards
+            const grid = document.createElement('div');
+            grid.style.cssText = 'display: flex; flex-direction: column; gap: 20px; flex-grow: 1;';
+
+            list.forEach((bike, idx) => {
+                const card = document.createElement('div');
+                const isEven = idx % 2 === 0;
+
+                // Pricing parsing
+                const prices = bike.prices || {};
+                let mainHours = '6';
+                if (!prices['6'] && prices['3']) mainHours = '3';
+                
+                const mainPriceVal = prices[mainHours] ? `${(prices[mainHours] / 1000).toFixed(0)}.000` : '-';
+                
+                // Secondary prices
+                const secondaries = [];
+                Object.entries(prices).forEach(([h, p]) => {
+                    if (h !== mainHours) {
+                        secondaries.push(`<div style="font-size: 13px; font-weight: bold; color: rgba(255,255,255,0.7);">${h} Jam : ${(p/1000).toFixed(0)}.000</div>`);
+                    }
+                });
+
+                // Feature badge (e.g. "+ INCLUDE SARUNG TANGAN!!")
+                let featureBadge = '';
+                if (bike.features && bike.features.length > 0) {
+                    featureBadge = `
+                        <div style="display: inline-block; background-color: #0084ff; border-radius: 4px; padding: 4px 12px; margin-top: 8px; font-size: 9px; font-weight: 900; color: #ffffff; text-transform: uppercase; letter-spacing: 0.5px;">
+                            + ${bike.features.join(' & ')}!!
+                        </div>
+                    `;
+                }
+
+                card.style.cssText = `
+                    display: flex;
+                    flex-direction: ${isEven ? 'row' : 'row-reverse'};
+                    background: linear-gradient(135deg, #091a3a 0%, #030a1b 100%);
+                    border-radius: 20px;
+                    border: 1px solid rgba(255, 255, 255, 0.08);
+                    overflow: hidden;
+                    height: 140px;
+                    align-items: center;
+                    box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+                `;
+
+                card.innerHTML = `
+                    <!-- Image Block -->
+                    <div style="width: 38%; height: 100%; display: flex; align-items: center; justify-content: center; overflow: hidden; padding: 10px;">
+                        <img src="${bike.image || '/bandung.png'}" style="max-height: 100%; max-width: 100%; object-fit: contain; filter: drop-shadow(0 8px 12px rgba(0,0,0,0.5));" />
+                    </div>
+                    
+                    <!-- Info Block -->
+                    <div style="width: 62%; padding: 15px; display: flex; flex-direction: column; justify-content: center; text-align: ${isEven ? 'left' : 'right'}; align-items: ${isEven ? 'flex-start' : 'flex-end'};">
+                        <h4 style="margin: 0 0 6px 0; font-size: 16px; font-weight: 800; color: #ffffff; text-transform: uppercase; letter-spacing: 0.5px;">
+                            ${bike.name}
+                        </h4>
+                        
+                        <!-- Price Grid -->
+                        <div style="display: flex; flex-direction: ${isEven ? 'row' : 'row-reverse'}; align-items: center; gap: 15px;">
+                            <!-- Large Main Price -->
+                            <div style="display: flex; flex-direction: column; align-items: ${isEven ? 'flex-start' : 'flex-end'};">
+                                <span style="font-size: 9px; font-weight: 900; color: #3b82f6; text-transform: uppercase; letter-spacing: 0.5px;">
+                                    ${mainHours} JAM
+                                </span>
+                                <span style="font-size: 22px; font-weight: 900; color: #ffffff; line-height: 1.1;">
+                                    ${mainPriceVal}
+                                </span>
+                            </div>
+                            
+                            <!-- Divider -->
+                            <div style="width: 1px; height: 35px; background-color: rgba(255,255,255,0.15);"></div>
+                            
+                            <!-- Secondary Prices -->
+                            <div style="display: flex; flex-direction: column; gap: 1px; text-align: ${isEven ? 'left' : 'right'};">
+                                ${secondaries.join('')}
+                            </div>
+                        </div>
+                        
+                        ${featureBadge}
+                    </div>
+                `;
+
+                grid.appendChild(card);
+            });
+
+            page.appendChild(grid);
+
+            // Page footer note
+            const footer = document.createElement('div');
+            footer.style.cssText = 'text-align: center; font-size: 10px; color: rgba(255,255,255,0.4); margin-top: auto; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 15px;';
+            footer.innerHTML = '* Syarat & Ketentuan Berlaku • Sewa 3 Jam Wajib Ambil di Garasi • Hubungi CS Nyetor untuk Booking';
+            page.appendChild(footer);
+
+            // Add page break except for last page
+            if (pageIdx < categoriesToPrint.length - 1) {
+                const breakDiv = document.createElement('div');
+                breakDiv.className = 'html2pdf__page-break';
+                page.appendChild(breakDiv);
+            }
+
+            container.appendChild(page);
+        });
+
+        // Save PDF via html2pdf
+        const opt = {
+            margin:       0,
+            filename:     'pricelist_nyetor_motor.pdf',
+            image:        { type: 'jpeg', quality: 0.98 },
+            html2canvas:  { scale: 2, useCORS: true, letterRendering: true, backgroundColor: '#020713' },
+            jsPDF:        { unit: 'pt', format: 'a4', orientation: 'portrait' }
+        };
+
+        html2pdf().from(container).set(opt).save();
     };
 
     // Calculate dates helper
@@ -1400,13 +1535,13 @@ export default function AdminPanel({ onClose }) {
                         )}
 
                         <div>
-                            <label className="block text-zinc-300 text-sm font-semibold mb-2">Username</label>
+                            <label className="block text-zinc-300 text-sm font-semibold mb-2">Email Admin</label>
                             <div className="relative">
                                 <User className="absolute left-3 top-3 text-zinc-500" size={18} />
                                 <input 
-                                    type="text" 
+                                    type="email" 
                                     className="w-full bg-zinc-900/80 border border-zinc-800 rounded-lg py-2.5 pl-10 pr-4 text-white placeholder-zinc-600 focus:outline-none focus:border-[#004aad] focus:ring-1 focus:ring-[#004aad] transition-all text-sm"
-                                    placeholder="Masukkan username..."
+                                    placeholder="Masukkan email admin..."
                                     value={usernameInput}
                                     onChange={(e) => setUsernameInput(e.target.value)}
                                     required
@@ -1618,6 +1753,16 @@ export default function AdminPanel({ onClose }) {
                             >
                                 <FileSpreadsheet size={18} />
                                 <span>Database Excel (XLSX)</span>
+                            </button>
+                            <button 
+                                onClick={() => {
+                                    setActiveTab('pricing');
+                                    setIsMobileSidebarOpen(false);
+                                }}
+                                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-semibold text-sm transition-all ${activeTab === 'pricing' ? 'bg-[#004aad] text-white' : 'text-zinc-400 hover:bg-zinc-900/60 hover:text-zinc-200'}`}
+                            >
+                                <DollarSign size={18} />
+                                <span>Atur Tarif & Price List</span>
                             </button>
                         </nav>
                     </div>
@@ -2822,6 +2967,175 @@ export default function AdminPanel({ onClose }) {
                             </div>
                         </div>
                     )}
+                    {activeTab === 'pricing' && (
+                        <div className="space-y-8 max-w-6xl">
+                            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                                <div>
+                                    <h1 className="text-3xl font-black text-white tracking-tight flex items-center gap-2">
+                                        <DollarSign className="text-[#004aad]" size={28} />
+                                        <span>ATUR TARIF & PRICE LIST</span>
+                                    </h1>
+                                    <p className="text-zinc-500 text-sm mt-1">
+                                        Sesuaikan tarif sewa motor secara real-time dan ekspor brosur PDF dengan desain profesional.
+                                    </p>
+                                </div>
+                                <button 
+                                    onClick={generatePricingPDF}
+                                    className="bg-gradient-to-r from-blue-600 to-sky-500 hover:from-blue-500 hover:to-sky-400 text-white font-bold px-6 py-3 rounded-xl shadow-lg shadow-blue-500/20 transition-all flex items-center gap-2 text-sm self-start md:self-auto cursor-pointer"
+                                >
+                                    <FileText size={18} />
+                                    <span>EKSPOR PDF BROSUR</span>
+                                </button>
+                            </div>
+
+                            {/* List of pricing categories */}
+                            <div className="bg-zinc-950 border border-zinc-900 rounded-2xl overflow-hidden shadow-xl">
+                                <div className="p-6 border-b border-zinc-900 bg-zinc-900/10">
+                                    <h3 className="text-base font-bold text-white uppercase tracking-wider">Kelola Daftar Tarif Motor</h3>
+                                </div>
+                                <div className="divide-y divide-zinc-900">
+                                    {dbPricing.length === 0 ? (
+                                        <div className="p-8 text-center text-zinc-500 text-sm">
+                                            Memuat data tarif dari Supabase atau tabel belum dibuat...
+                                        </div>
+                                    ) : (
+                                        dbPricing.map(bike => {
+                                            return (
+                                                <div key={bike.id} className="p-6 flex flex-col xl:flex-row xl:items-center justify-between gap-6 hover:bg-zinc-900/10 transition-colors">
+                                                    <div className="flex items-center gap-4">
+                                                        <div className="w-16 h-16 bg-zinc-900 rounded-lg overflow-hidden border border-zinc-800 shrink-0 flex items-center justify-center">
+                                                            {bike.image ? (
+                                                                <img src={bike.image} alt={bike.name} className="w-full h-full object-cover" />
+                                                            ) : (
+                                                                <CameraIcon size={20} className="text-zinc-700" />
+                                                            )}
+                                                        </div>
+                                                        <div>
+                                                            <h4 className="font-bold text-white text-base">{bike.name}</h4>
+                                                            <div className="flex gap-2 mt-1">
+                                                                <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded bg-zinc-900 text-zinc-400 border border-zinc-800">
+                                                                    {bike.category.replace('_', ' ')}
+                                                                </span>
+                                                                {bike.is_additional && (
+                                                                    <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                                                                        Unit Tambahan
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="flex flex-wrap items-center gap-6">
+                                                        {/* 3h, 6h, 12h, 24h input prices */}
+                                                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                                                            <div>
+                                                                <label className="block text-[10px] text-zinc-500 font-bold uppercase mb-1">3 Jam</label>
+                                                                <input 
+                                                                    type="number" 
+                                                                    className="w-24 bg-zinc-900 border border-zinc-800 rounded px-2.5 py-1.5 text-sm text-white focus:outline-none focus:border-[#004aad]"
+                                                                    placeholder="N/A"
+                                                                    value={bike.prices['3'] || ''}
+                                                                    onChange={(e) => {
+                                                                        const val = e.target.value ? Number(e.target.value) : undefined;
+                                                                        const updatedPrices = { ...bike.prices };
+                                                                        if (val === undefined || isNaN(val)) delete updatedPrices['3'];
+                                                                        else updatedPrices['3'] = val;
+                                                                        setDbPricing(prev => prev.map(p => p.id === bike.id ? { ...p, prices: updatedPrices } : p));
+                                                                    }}
+                                                                />
+                                                            </div>
+                                                            <div>
+                                                                <label className="block text-[10px] text-zinc-500 font-bold uppercase mb-1">6 Jam</label>
+                                                                <input 
+                                                                    type="number" 
+                                                                    className="w-24 bg-zinc-900 border border-zinc-800 rounded px-2.5 py-1.5 text-sm text-white focus:outline-none focus:border-[#004aad]"
+                                                                    placeholder="N/A"
+                                                                    value={bike.prices['6'] || ''}
+                                                                    onChange={(e) => {
+                                                                        const val = e.target.value ? Number(e.target.value) : undefined;
+                                                                        const updatedPrices = { ...bike.prices };
+                                                                        if (val === undefined || isNaN(val)) delete updatedPrices['6'];
+                                                                        else updatedPrices['6'] = val;
+                                                                        setDbPricing(prev => prev.map(p => p.id === bike.id ? { ...p, prices: updatedPrices } : p));
+                                                                    }}
+                                                                />
+                                                            </div>
+                                                            <div>
+                                                                <label className="block text-[10px] text-zinc-500 font-bold uppercase mb-1">12 Jam</label>
+                                                                <input 
+                                                                    type="number" 
+                                                                    className="w-24 bg-zinc-900 border border-zinc-800 rounded px-2.5 py-1.5 text-sm text-white focus:outline-none focus:border-[#004aad]"
+                                                                    placeholder="N/A"
+                                                                    value={bike.prices['12'] || ''}
+                                                                    onChange={(e) => {
+                                                                        const val = e.target.value ? Number(e.target.value) : undefined;
+                                                                        const updatedPrices = { ...bike.prices };
+                                                                        if (val === undefined || isNaN(val)) delete updatedPrices['12'];
+                                                                        else updatedPrices['12'] = val;
+                                                                        setDbPricing(prev => prev.map(p => p.id === bike.id ? { ...p, prices: updatedPrices } : p));
+                                                                    }}
+                                                                />
+                                                            </div>
+                                                            <div>
+                                                                <label className="block text-[10px] text-zinc-500 font-bold uppercase mb-1">24 Jam</label>
+                                                                <input 
+                                                                    type="number" 
+                                                                    className="w-24 bg-zinc-900 border border-zinc-800 rounded px-2.5 py-1.5 text-sm text-white focus:outline-none focus:border-[#004aad]"
+                                                                    placeholder="N/A"
+                                                                    value={bike.prices['24'] || ''}
+                                                                    onChange={(e) => {
+                                                                        const val = e.target.value ? Number(e.target.value) : undefined;
+                                                                        const updatedPrices = { ...bike.prices };
+                                                                        if (val === undefined || isNaN(val)) delete updatedPrices['24'];
+                                                                        else updatedPrices['24'] = val;
+                                                                        setDbPricing(prev => prev.map(p => p.id === bike.id ? { ...p, prices: updatedPrices } : p));
+                                                                    }}
+                                                                />
+                                                            </div>
+                                                        </div>
+
+                                                        {/* Toggle unit tambahan */}
+                                                        <div className="flex items-center gap-2 min-w-[125px] mt-4 xl:mt-0">
+                                                            <input 
+                                                                type="checkbox"
+                                                                id={`check-add-${bike.id}`}
+                                                                className="rounded border-zinc-800 text-[#004aad] focus:ring-[#004aad] bg-zinc-900 cursor-pointer"
+                                                                checked={bike.is_additional || false}
+                                                                onChange={(e) => {
+                                                                    const checked = e.target.checked;
+                                                                    let newCat = bike.category;
+                                                                    if (checked) {
+                                                                        newCat = 'unit_tambahan';
+                                                                    } else {
+                                                                        const staticInfo = Object.entries(catalogData).find(([cat, list]) => list.some(item => item.id === bike.id));
+                                                                        if (staticInfo) {
+                                                                            newCat = staticInfo[0];
+                                                                        } else {
+                                                                            newCat = 'super_ekonomis';
+                                                                        }
+                                                                    }
+                                                                    setDbPricing(prev => prev.map(p => p.id === bike.id ? { ...p, is_additional: checked, category: newCat } : p));
+                                                                }}
+                                                            />
+                                                            <label htmlFor={`check-add-${bike.id}`} className="text-xs text-zinc-400 font-bold select-none cursor-pointer">Unit Tambahan</label>
+                                                        </div>
+
+                                                        {/* Action Save button */}
+                                                        <button 
+                                                            onClick={() => handleSavePriceRow(bike.id, bike.prices, bike.is_additional, bike.category)}
+                                                            className="bg-[#004aad] hover:bg-blue-600 text-white font-bold text-xs py-2.5 px-5 rounded-xl shadow transition-colors cursor-pointer w-full sm:w-auto mt-4 sm:mt-0"
+                                                        >
+                                                            SIMPAN
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    )}
 
                     {/* SETTINGS CREDENTIALS TAB */}
                     {activeTab === 'settings' && (
@@ -2846,25 +3160,11 @@ export default function AdminPanel({ onClose }) {
                                     )}
 
                                     <div>
-                                        <label className="block text-zinc-400 text-sm font-semibold mb-2">Password Saat Ini (Wajib) *</label>
+                                        <label className="block text-zinc-400 text-sm font-semibold mb-2">Email Admin Baru (Kosongkan jika tetap)</label>
                                         <input 
-                                            type="password"
-                                            className="w-full bg-zinc-900 border border-zinc-800 rounded-lg p-3 text-white focus:outline-none focus:border-[#004aad]"
-                                            placeholder="Masukkan sandi saat ini untuk validasi..."
-                                            value={settingsForm.currentPassword}
-                                            onChange={(e) => setSettingsForm({ ...settingsForm, currentPassword: e.target.value })}
-                                            required
-                                        />
-                                    </div>
-
-                                    <hr className="border-zinc-900" />
-
-                                    <div>
-                                        <label className="block text-zinc-400 text-sm font-semibold mb-2">Username Baru (Kosongkan jika tetap)</label>
-                                        <input 
-                                            type="text"
+                                            type="email"
                                             className="w-full bg-zinc-900 border border-zinc-800 rounded-lg p-3 text-white placeholder-zinc-700 focus:outline-none focus:border-[#004aad]"
-                                            placeholder="Masukkan username baru..."
+                                            placeholder="Masukkan email baru..."
                                             value={settingsForm.newUsername}
                                             onChange={(e) => setSettingsForm({ ...settingsForm, newUsername: e.target.value })}
                                         />

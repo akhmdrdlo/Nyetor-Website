@@ -7,12 +7,12 @@ const categories = [
     { id: 'super_ekonomis', label: 'Super Ekonomis', color: 'bg-blue-600' },
     { id: 'unit_bebek', label: 'Unit Bebek', color: 'bg-orange-600' },
     { id: 'ekonomis', label: 'Ekonomis Unit', color: 'bg-indigo-600' },
-    { id: 'silver', label: 'Silver Unit', color: 'bg-gray-600' },
-    { id: 'gold', label: 'Gold Unit', color: 'bg-yellow-600' },
+    { id: 'silver', label: 'Silver Unit', color: 'bg-zinc-600' },
+    { id: 'unit_tambahan', label: 'Unit Tambahan', color: 'bg-amber-600' },
     { id: 'accessories', label: 'Aksesoris', color: 'bg-red-600' },
 ];
 
-export default function Catalog({ onSelectBike }) {
+export default function Catalog({ onSelectBike, customCatalog }) {
     const [priceMode, setPriceMode] = useState('regular'); // 'regular' | 'warlok' | 'seasonal'
     const [activeTab, setActiveTab] = useState('super_ekonomis');
     const [isSeasonalActive, setIsSeasonalActive] = useState(false);
@@ -66,9 +66,10 @@ export default function Catalog({ onSelectBike }) {
     }
 
     // Data Source Logic
-    let currentList = catalogData[activeTab];
-    if (isSpecial) currentList = catalogData.seasonal;
-    if (isWarlok) currentList = catalogData.warlok;
+    const activeCatalog = customCatalog || catalogData;
+    let currentList = activeCatalog[activeTab] || [];
+    if (isSpecial) currentList = activeCatalog.seasonal || [];
+    if (isWarlok) currentList = activeCatalog.warlok || [];
 
     return (
         <div className={`relative py-20 overflow-hidden transition-colors duration-700 ${themeBg}`}>
@@ -193,45 +194,99 @@ export default function Catalog({ onSelectBike }) {
                     </div>
                 )}
 
-                {/* Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                    <AnimatePresence>
-                        {currentList?.map((bike) => (
-                            <motion.div
-                                key={bike.id}
-                                layoutId={bike.id} // LayoutID for smooth morphing if IDs match
-                                initial={{ opacity: 0, y: 30 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                exit={{ opacity: 0, scale: 0.9 }}
-                                transition={{ duration: 0.4, type: "spring" }}
-                                className={`bg-white rounded-3xl overflow-hidden shadow-xl hover:shadow-2xl transition-all duration-300 group cursor-pointer border relative ${isSpecial ? 'border-emerald-100' : 'border-gray-100'}`}
-                                onClick={() => onSelectBike(bike)}
-                            >
-                                {/* Diagonal Cut Image Container */}
-                                <div className="h-64 bg-gray-100 relative overflow-hidden">
-                                    <div className={`absolute inset-0 transition-colors z-10 ${themeOverlay}`} />
-                                    {bike.image ? (
-                                        <img
-                                            src={bike.image}
-                                            alt={bike.name}
-                                            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
-                                        />
-                                    ) : (
-                                        <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200 text-gray-400 select-none">
-                                            <Camera size={44} className="mb-2 stroke-1 text-gray-400 group-hover:scale-110 transition-transform duration-500" />
-                                            <span className="text-xs font-bold uppercase tracking-wider">Foto Belum Tersedia</span>
+                {/* Grid or Warlok Warning Card */}
+                {isWarlok ? (
+                    <div className="max-w-2xl mx-auto w-full">
+                        <motion.a
+                            href="https://wa.me/6287818747396?text=Halo%20Admin%20Nyetor,%20saya%20ingin%20tanya%20mengenai%20Katalog%20Warlok%20ber-KTP%20Bandung"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
+                            className="block bg-gradient-to-br from-violet-600 to-indigo-700 text-white p-8 md:p-10 rounded-3xl shadow-2xl hover:shadow-violet-500/20 transition-all duration-300 relative overflow-hidden border border-violet-500/30 text-center cursor-pointer group"
+                        >
+                            <div className="absolute inset-0 bg-gradient-to-r from-fuchsia-500/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none" />
+                            
+                            <div className="relative z-10 space-y-6">
+                                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-white/10 border border-white/20 text-white mb-2 animate-bounce">
+                                    <AlertTriangle size={32} />
+                                </div>
+                                <h3 className="text-2xl md:text-3xl font-black tracking-tight leading-snug uppercase">
+                                    Katalog Warlok Ber-KTP Bandung
+                                </h3>
+                                <p className="text-violet-100 font-medium text-base md:text-lg max-w-lg mx-auto leading-relaxed">
+                                    Katalog Warlok ber-KTP Bandung silakan chat langsung ke admin ya! 🤙
+                                </p>
+                                <div className="inline-flex items-center gap-2 bg-white text-violet-800 font-bold px-8 py-3.5 rounded-2xl shadow-lg transition-transform group-hover:scale-105">
+                                    <span>HUBUNGI ADMIN VIA WHATSAPP</span>
+                                </div>
+                            </div>
+                        </motion.a>
+                    </div>
+                ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                        {/* Info Alert for Unit Tambahan */}
+                        {activeTab === 'unit_tambahan' && (
+                            <div className="col-span-full bg-amber-500/10 border border-amber-500/20 p-5 rounded-2xl flex gap-3 text-amber-800 text-sm">
+                                <AlertTriangle className="shrink-0 text-amber-600" size={20} />
+                                <div>
+                                    <span className="font-extrabold block mb-0.5">INFORMASI UNIT TAMBAHAN</span>
+                                    <span>Unit di bawah ini merupakan unit pendukung/tambahan dan hanya tersedia apabila unit utama penuh atau sedang diservis. Silakan hubungi CS untuk konfirmasi.</span>
+                                </div>
+                            </div>
+                        )}
+
+                        <AnimatePresence>
+                            {currentList?.map((bike) => (
+                                <motion.div
+                                    key={bike.id}
+                                    layoutId={bike.id} // LayoutID for smooth morphing if IDs match
+                                    initial={{ opacity: 0, y: 30 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    exit={{ opacity: 0, scale: 0.9 }}
+                                    transition={{ duration: 0.4, type: "spring" }}
+                                    className={`bg-white rounded-3xl overflow-hidden shadow-xl hover:shadow-2xl transition-all duration-300 group cursor-pointer border relative ${isSpecial ? 'border-emerald-100' : 'border-gray-100'}`}
+                                    onClick={() => onSelectBike(bike)}
+                                >
+                                    {/* Unit Tambahan Badge */}
+                                    {(bike.isAdditional || activeTab === 'unit_tambahan') && (
+                                        <div className="absolute top-4 right-4 z-20 bg-amber-500 text-black text-[10px] font-black uppercase tracking-wider px-3 py-1 rounded-full shadow-md animate-pulse">
+                                            Bila Tersedia
                                         </div>
                                     )}
+                                    {/* Diagonal Cut Image Container */}
+                                    <div className="h-64 bg-gray-100 relative overflow-hidden">
+                                        <div className={`absolute inset-0 transition-colors z-10 ${themeOverlay}`} />
+                                        {bike.image ? (
+                                            <img
+                                                src={bike.image}
+                                                alt={bike.name}
+                                                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                                            />
+                                        ) : (
+                                            <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200 text-gray-400 select-none">
+                                                <Camera size={44} className="mb-2 stroke-1 text-gray-400 group-hover:scale-110 transition-transform duration-500" />
+                                                <span className="text-xs font-bold uppercase tracking-wider">Foto Belum Tersedia</span>
+                                            </div>
+                                        )}
 
-                                    {/* Sharp Badge */}
-                                    <div className={`absolute bottom-0 left-0 px-6 py-2 rounded-tr-3xl z-20 shadow-lg ${isRegular ? 'bg-[#004aad]' : ''} text-white`} style={{ backgroundColor: isRegular ? '' : themeColor }}>
-                                        <h3 className={`text-lg font-black italic tracking-wider ${!bike.image ? 'underline decoration-2 decoration-white underline-offset-4' : ''}`}>
-                                            {bike.name}
-                                        </h3>
+                                        {/* Sharp Badge */}
+                                        <div className={`absolute bottom-0 left-0 px-6 py-2 rounded-tr-3xl z-20 shadow-lg ${isRegular ? 'bg-[#004aad]' : ''} text-white`} style={{ backgroundColor: isRegular ? '' : themeColor }}>
+                                            <h3 className={`text-lg font-black italic tracking-wider ${!bike.image ? 'underline decoration-2 decoration-white underline-offset-4' : ''}`}>
+                                                {bike.name}
+                                            </h3>
+                                        </div>
                                     </div>
-                                </div>
 
-                                <div className="p-6 pt-8">
+                                    <div className="p-6 pt-8">
+                                        {/* Unit Tambahan description tag */}
+                                        {(bike.isAdditional || activeTab === 'unit_tambahan') && (
+                                            <div className="mb-4 inline-flex items-center gap-1 bg-amber-500/10 text-amber-700 border border-amber-500/20 text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-lg">
+                                                ⚠️ UNIT TAMBAHAN (BILA TERSEDIA)
+                                            </div>
+                                        )}
                                     {/* Prices */}
                                     <div className="space-y-3 mb-6">
                                         {Object.entries(bike.prices).slice(0, 4).map(([hours, price]) => (
@@ -267,6 +322,7 @@ export default function Catalog({ onSelectBike }) {
                         ))}
                     </AnimatePresence>
                 </div>
+                )}
             </div>
         </div>
     );

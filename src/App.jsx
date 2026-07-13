@@ -17,13 +17,67 @@ import './index.css';
 
 // Lib
 import html2pdf from 'html2pdf.js';
-
+import { supabase } from './supabaseClient';
 
 function App() {
   const [view, setView] = useState('hero'); // hero, catalog, booking, success, invoice_viewer
   const [selectedBike, setSelectedBike] = useState(null);
   const [invoiceData, setInvoiceData] = useState(null);
+  const [customCatalog, setCustomCatalog] = useState(null);
   const invoiceRef = useRef();
+
+  // Load custom pricing from Supabase dynamically
+  useEffect(() => {
+    if (!supabase) return;
+
+    const fetchPricing = async () => {
+      try {
+        const { data, error } = await supabase.from('nyetor_pricing').select('*');
+        if (error) throw error;
+        if (data && data.length > 0) {
+          const newCatalog = {
+            unit_bebek: [],
+            super_ekonomis: [],
+            ekonomis: [],
+            silver: [],
+            gold: [],
+            accessories: [],
+            warlok: [],
+            unit_tambahan: [],
+            seasonal: []
+          };
+          data.forEach(row => {
+            const category = row.category;
+            if (newCatalog[category]) {
+              newCatalog[category].push({
+                id: row.id,
+                name: row.name,
+                image: row.image,
+                prices: row.prices,
+                features: row.features || [],
+                isAdditional: row.is_additional || false
+              });
+            }
+          });
+          setCustomCatalog(newCatalog);
+        }
+      } catch (e) {
+        console.error("Failed to fetch custom pricing from Supabase:", e);
+      }
+    };
+
+    fetchPricing();
+
+    // Subscribe to realtime pricing updates
+    const pricingChannel = supabase
+      .channel('pricing-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'nyetor_pricing' }, fetchPricing)
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(pricingChannel);
+    };
+  }, []);
 
   // URL Parser for Persistence
   useEffect(() => {
@@ -113,7 +167,7 @@ function App() {
           <div id="catalog-section" className="block relative z-10">
             {/* Spacer to pull overlap if needed, or just container */}
             <div className="container">
-              <Catalog onSelectBike={handleSelectBike} />
+              <Catalog onSelectBike={handleSelectBike} customCatalog={customCatalog} />
             </div>
           </div>
 
