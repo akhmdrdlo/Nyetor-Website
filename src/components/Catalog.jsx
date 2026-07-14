@@ -8,11 +8,12 @@ const categories = [
     { id: 'unit_bebek', label: 'Unit Bebek', color: 'bg-orange-600' },
     { id: 'ekonomis', label: 'Ekonomis Unit', color: 'bg-indigo-600' },
     { id: 'silver', label: 'Silver Unit', color: 'bg-zinc-600' },
+    { id: 'gold', label: 'Gold Unit', color: 'bg-yellow-600' },
     { id: 'unit_tambahan', label: 'Unit Tambahan', color: 'bg-amber-600' },
     { id: 'accessories', label: 'Aksesoris', color: 'bg-red-600' },
 ];
 
-export default function Catalog({ onSelectBike, customCatalog }) {
+export default function Catalog({ onSelectBike, customCatalog, fleet = [] }) {
     const [priceMode, setPriceMode] = useState('regular'); // 'regular' | 'warlok' | 'seasonal'
     const [activeTab, setActiveTab] = useState('super_ekonomis');
     const [isSeasonalActive, setIsSeasonalActive] = useState(false);
@@ -250,6 +251,24 @@ export default function Catalog({ onSelectBike, customCatalog }) {
                                     className={`bg-white rounded-3xl overflow-hidden shadow-xl hover:shadow-2xl transition-all duration-300 group cursor-pointer border relative ${isSpecial ? 'border-emerald-100' : 'border-gray-100'}`}
                                     onClick={() => onSelectBike(bike)}
                                 >
+                                    {/* Real-time Stock Badge */}
+                                    {activeTab !== 'accessories' && (() => {
+                                        const bikeUnits = fleet.filter(item => item.bike_id === bike.id);
+                                        if (bikeUnits.length === 0) return null;
+                                        
+                                        const availableCount = bikeUnits.filter(item => item.status === 'Tersedia').length;
+                                        
+                                        return (
+                                            <div className={`absolute top-4 left-4 z-20 text-[10px] font-black uppercase tracking-wider px-3 py-1 rounded-full shadow-md ${
+                                                availableCount > 0 
+                                                    ? 'bg-emerald-500 text-white' 
+                                                    : 'bg-rose-500 text-white'
+                                            }`}>
+                                                {availableCount > 0 ? `Ready: ${availableCount} Unit` : 'Habis Dipesan'}
+                                            </div>
+                                        );
+                                    })()}
+
                                     {/* Unit Tambahan Badge */}
                                     {(bike.isAdditional || activeTab === 'unit_tambahan') && (
                                         <div className="absolute top-4 right-4 z-20 bg-amber-500 text-black text-[10px] font-black uppercase tracking-wider px-3 py-1 rounded-full shadow-md animate-pulse">

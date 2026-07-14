@@ -31,7 +31,8 @@ import {
     DollarSign,
     FileText,
     Sun,
-    Moon
+    Moon,
+    ShieldAlert
 } from 'lucide-react';
 import { catalogData, SHIPPING_ZONES } from '../data';
 
@@ -47,8 +48,9 @@ export default function AdminPanel({ onClose }) {
     const [authError, setAuthError] = useState('');
 
     // Admin Dashboard Active Tab
-    const [activeTab, setActiveTab] = useState('summary'); // 'summary' | 'fleet' | 'booking' | 'logs' | 'backup'
+    const [activeTab, setActiveTab] = useState('summary'); // 'summary' | 'fleet' | 'booking' | 'logs' | 'backup' | 'shipping' | 'luar_kota'
     const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+    const [isTarifDropdownOpen, setIsTarifDropdownOpen] = useState(false);
 
     // Database States
     const [fleet, setFleet] = useState([]);
@@ -121,7 +123,19 @@ export default function AdminPanel({ onClose }) {
     });
     const [settingsMsg, setSettingsMsg] = useState({ text: '', type: 'success' });
     const [dbPricing, setDbPricing] = useState([]);
+    const [dbShippingZones, setDbShippingZones] = useState([]);
+    const [dbLuarKota, setDbLuarKota] = useState([]);
     const [theme, setTheme] = useState(() => localStorage.getItem('adminTheme') || 'dark');
+    const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
+
+    const showToast = (message, type = 'success') => {
+        setToast({ show: true, message, type });
+        // Set a timer to close the toast automatically
+        const timer = setTimeout(() => {
+            setToast(prev => ({ ...prev, show: false }));
+        }, 4000);
+        return () => clearTimeout(timer);
+    };
 
 
 
@@ -193,9 +207,27 @@ export default function AdminPanel({ onClose }) {
                 createdAt: row.created_at
             }));
 
+            // Fetch Shipping Zones
+            const { data: shippingZonesData, error: shippingZonesErr } = await supabase
+                .from('nyetor_shipping_zones')
+                .select('*')
+                .order('display_order', { ascending: true });
+                
+            if (shippingZonesErr) throw shippingZonesErr;
+            
+            // Fetch Luar Kota
+            const { data: luarKotaData, error: luarKotaErr } = await supabase
+                .from('nyetor_luar_kota')
+                .select('*')
+                .order('display_order', { ascending: true });
+                
+            if (luarKotaErr) throw luarKotaErr;
+
             setFleet(mappedFleet);
             setLogs(mappedLogs);
             setDbPricing(pricingData || []);
+            setDbShippingZones(shippingZonesData || []);
+            setDbLuarKota(luarKotaData || []);
         } catch (err) {
             console.error("Failed to load from Supabase:", err);
         } finally {
@@ -346,6 +378,83 @@ export default function AdminPanel({ onClose }) {
         }
     };
 
+    const [newLuarKota, setNewLuarKota] = useState({ name: '', price: '', lat: -6.9, lng: 107.6 });
+
+    const handleSaveShippingZone = async (id, price, label, detail) => {
+        if (!supabase) return;
+        try {
+            const { error } = await supabase
+                .from('nyetor_shipping_zones')
+                .update({ price: Number(price), label, detail })
+                .eq('id', id);
+            if (error) throw error;
+            showToast("Biaya Antar Jemput berhasil disimpan!", "success");
+            loadFromSupabase();
+        } catch (e) {
+            console.error(e);
+            showToast("Gagal menyimpan data: " + e.message, "error");
+        }
+    };
+
+    const handleSaveLuarKota = async (id, name, price) => {
+        if (!supabase) return;
+        try {
+            const { error } = await supabase
+                .from('nyetor_luar_kota')
+                .update({ name, price })
+                .eq('id', id);
+            if (error) throw error;
+            showToast("Biaya Keluar Kota berhasil disimpan!", "success");
+            loadFromSupabase();
+        } catch (e) {
+            console.error(e);
+            showToast("Gagal menyimpan data: " + e.message, "error");
+        }
+    };
+
+    const handleDeleteLuarKota = async (id) => {
+        if (!supabase) return;
+        if (!confirm("Apakah Anda yakin ingin menghapus lokasi luar kota ini?")) return;
+        try {
+            const { error } = await supabase
+                .from('nyetor_luar_kota')
+                .delete()
+                .eq('id', id);
+            if (error) throw error;
+            showToast("Lokasi luar kota berhasil dihapus!", "success");
+            loadFromSupabase();
+        } catch (e) {
+            console.error(e);
+            showToast("Gagal menghapus data: " + e.message, "error");
+        }
+    };
+
+    const handleAddLuarKota = async (e) => {
+        e.preventDefault();
+        if (!supabase) return;
+        if (!newLuarKota.name || !newLuarKota.price) {
+            showToast("Nama dan biaya wajib diisi!", "error");
+            return;
+        }
+        try {
+            const { error } = await supabase
+                .from('nyetor_luar_kota')
+                .insert({
+                    name: newLuarKota.name,
+                    price: newLuarKota.price,
+                    pos: [Number(newLuarKota.lat), Number(newLuarKota.lng)],
+                    display_order: dbLuarKota.length + 1
+                });
+            if (error) throw error;
+            showToast("Lokasi luar kota baru berhasil ditambahkan!", "success");
+            setNewLuarKota({ name: '', price: '', lat: -6.9, lng: 107.6 });
+            loadFromSupabase();
+        } catch (e) {
+            console.error(e);
+            showToast("Gagal menambahkan data: " + e.message, "error");
+        }
+    };
+
     // Save motorbike price rates row to Supabase
     const handleSavePriceRow = async (bikeId, prices, isAdditional, category) => {
         if (!supabase) return;
@@ -360,11 +469,165 @@ export default function AdminPanel({ onClose }) {
                 .eq('id', bikeId);
             
             if (error) throw error;
-            alert('Tarif unit berhasil diperbarui!');
+            showToast('Tarif unit berhasil diperbarui!', "success");
             loadFromSupabase();
         } catch (e) {
             console.error(e);
-            alert('Gagal memperbarui tarif: ' + e.message);
+            showToast('Gagal memperbarui tarif: ' + e.message, "error");
+        }
+    };
+
+    const handleSyncDatabase = async () => {
+        if (!supabase) {
+            showToast("Database tidak terhubung!", "error");
+            return;
+        }
+        if (!confirm("Apakah Anda yakin ingin menyinkronkan seluruh database? Ini akan memperbarui daftar tarif motor, aksesoris, zona antar jemput, dan luar kota ke data terbaru per 13 Juli 2026.")) return;
+        
+        try {
+            // 1. Sync nyetor_pricing
+            const pricingData = [
+                { id: 'jupiter_z', name: 'YAMAHA JUPITER Z', category: 'unit_bebek', image: '/jupiterz.png', prices: { "6": 40000, "12": 50000, "24": 80000 }, features: [], is_additional: false },
+                { id: 'mio_m3', name: 'YAMAHA M3, MIO Z, MIO S', category: 'super_ekonomis', image: '/mio.png', prices: { "6": 45000, "12": 55000, "24": 90000 }, features: ["Include Sarung Tangan"], is_additional: false },
+                { id: 'beat_pop', name: 'HONDA BEAT POP', category: 'super_ekonomis', image: '/beat_pop.png', prices: { "3": 45000, "6": 50000, "12": 60000, "24": 95000 }, features: ["Include Sarung Tangan"], is_additional: false },
+                { id: 'genio', name: 'HONDA GENIO', category: 'ekonomis', image: '/genio2022.png', prices: { "3": 50000, "6": 55000, "12": 75000, "24": 110000 }, features: ["Include Sarung Tangan"], is_additional: false },
+                { id: 'beat_deluxe', name: 'HONDA BEAT DELUXE', category: 'ekonomis', image: '/beat_deluxe.png', prices: { "3": 55000, "6": 60000, "12": 80000, "24": 115000 }, features: ["Include Sarung Tangan"], is_additional: false },
+                { id: 'beat_street', name: 'HONDA BEAT STREET', category: 'ekonomis', image: '/beat_street.png', prices: { "3": 55000, "6": 60000, "12": 80000, "24": 115000 }, features: [], is_additional: false },
+                { id: 'scoopy_2023', name: 'HONDA SCOOPY 2023', category: 'ekonomis', image: '/scoopy2023.png', prices: { "3": 55000, "6": 60000, "12": 80000, "24": 120000 }, features: ["Include Sarung Tangan"], is_additional: false },
+                { id: 'scoopy_keyless', name: 'ALLNEW SCOOPY KEYLESS 2025', category: 'silver', image: '/scoopy_keyless.png', prices: { "3": 60000, "6": 65000, "12": 85000, "24": 125000 }, features: [], is_additional: false },
+                { id: 'gear_matic', name: 'YAMAHA GEAR MATIC', category: 'silver', image: '/gear_matic.png', prices: { "3": 60000, "6": 65000, "12": 85000, "24": 130000 }, features: ["Include Sarung Tangan"], is_additional: false },
+                { id: 'vario_led_old', name: 'VARIO LED OLD', category: 'silver', image: '/vario_ledOld.png', prices: { "3": 60000, "6": 65000, "12": 90000, "24": 135000 }, features: [], is_additional: false },
+                { id: 'fazzio_keyless', name: 'YAMAHA FAZZIO KEYLESS', category: 'silver', image: '/fazzio.png', prices: { "3": 60000, "6": 65000, "12": 90000, "24": 140000 }, features: ["Include Sarung Tangan"], is_additional: false },
+                
+                // Gold Units
+                { id: 'nmax_old', name: 'NMAX Old 2019', category: 'gold', image: '/nmax.png', prices: { "3": 70000, "6": 75000, "12": 95000, "24": 145000 }, features: [], is_additional: false },
+                { id: 'aerox', name: 'AEROX OLD 2019', category: 'gold', image: '/aerox.png', prices: { "3": 70000, "6": 75000, "12": 95000, "24": 150000 }, features: [], is_additional: false },
+                { id: 'lexi_abs', name: 'YAMAHA LEXI LX 155 MATIC NEW KEYLESS 2026', category: 'gold', image: '/yamahalexi.png', prices: { "3": 70000, "6": 75000, "12": 105000, "24": 155000 }, features: ["Include Sarung Tangan"], is_additional: false },
+                { id: 'nmax_keyless', name: 'NMAX NEW KEYLESS 2022', category: 'gold', image: '/nmax_keyless.png', prices: { "3": 70000, "6": 75000, "12": 105000, "24": 160000 }, features: [], is_additional: false },
+                
+                // Unit Tambahan
+                { id: 'beat_karbu', name: 'BEAT KARBU', category: 'unit_tambahan', image: '/beatkarbu.png', prices: { "3": 40000, "6": 45000, "12": 55000, "24": 85000 }, features: [], is_additional: true },
+                { id: 'fino', name: 'YAMAHA FINO', category: 'unit_tambahan', image: '/FINO.png', prices: { "3": 45000, "6": 50000, "12": 60000, "24": 95000 }, features: [], is_additional: true },
+                { id: 'vario_kzr', name: 'VARIO KZR', category: 'unit_tambahan', image: '/vario_kzr.png', prices: { "3": 45000, "6": 50000, "12": 60000, "24": 95000 }, features: [], is_additional: true },
+                { id: 'beat_2018', name: 'BEAT 2018', category: 'unit_tambahan', image: '/beat2018.png', prices: { "3": 45000, "6": 50000, "12": 70000, "24": 105000 }, features: [], is_additional: true },
+                { id: 'vario_160_keyless', name: 'Vario 160 / PCX', category: 'unit_tambahan', image: '/vario160.png', prices: { "3": 65000, "6": 70000, "12": 90000, "24": 140000 }, features: [], is_additional: true },
+                
+                // Accessories
+                { id: 'helm_bogo', name: 'HELM BOGO', category: 'accessories', image: '/bogo.png', prices: { "12": 15000, "24": 20000 }, features: ["Dapat 2 Helm jika sewa motor"], is_additional: false },
+                { id: 'helm_ink_gmt', name: 'HELM INK & GMT', category: 'accessories', image: '/ink_gmt.png', prices: { "12": 12000, "24": 22000 }, features: [], is_additional: false },
+                { id: 'helm_alv', name: 'HELM ALV', category: 'accessories', image: '/alv.png', prices: { "12": 20000, "24": 25000 }, features: [], is_additional: false },
+                { id: 'backpack', name: 'SEWA BACKPACK', category: 'accessories', image: 'https://images.unsplash.com/photo-1553062407-98eeb64c6a62?auto=format&fit=crop&q=80&w=400', prices: { "12": 15000, "24": 20000 }, features: ["Kapasitas Besar"], is_additional: false }
+            ];
+
+            const zonesData = [
+                { id: 1, zone_name: 'Zone A', price: 6000, label: 'Zone A (Rp 6.000)', detail: 'Manisi Bawah (Batasnya Pertigaan Jl. Cikuda), Cipadung Bawah (Batas nya SD 169 Pelita), St. Cimekar, UIN 1, Bunderan, Gacoan Cipadung, Jln Pertamina, Tritan Point, Panyileukan, UIN 2', display_order: 1 },
+                { id: 2, zone_name: 'Zone B', price: 8000, label: 'Zone B (Rp 8.000)', detail: 'Cipadung Atas (Start dari SD 169 Pelita sampai Manglayang Park), Manisi Atas (Start dari jl. cikuda Sampai Sejajar dengan Manglayang Park), Arah cinunuk sampe gang sindang reret', display_order: 2 },
+                { id: 3, zone_name: 'Zone C', price: 10000, label: 'Zone C (Rp 10.000)', detail: 'Cilengkrang Atas, Manglayang Atas (Lepas dari zona pengantaran cipadung dan manisi)', display_order: 3 },
+                { id: 4, zone_name: 'Zone D', price: 12000, label: 'Zone D (Rp 12.000)', detail: 'Ujung Berung, ST. GEDEBAGE, Batu Kuda, Hotel Shakti, Perempatan Gedebage, GBLA', display_order: 4 },
+                { id: 5, zone_name: 'Zone E', price: 13000, label: 'Zone E (Rp 13.000)', detail: 'Cinunuk Start dari gang Sindangreret sampai sebelum jalan searah cileunyi, Cibiru Hilir', display_order: 5 },
+                { id: 6, zone_name: 'Zone F', price: 15000, label: 'Zone F (Rp 15.000)', detail: 'Cileunyi start dari jalan searah, Stasiun KCIC Tegalluar', display_order: 6 },
+                { id: 7, zone_name: 'Zone G', price: 20000, label: 'Zone G (Rp 20.000)', detail: 'Pasir Impun Bawah, Riung Bandung, Hotel Cordela, Cisaranten, Cijambe Bawah, Lapas Sukamiskin', display_order: 7 },
+                { id: 8, zone_name: 'Zone H', price: 25000, label: 'Zone H (Rp 25.000)', detail: 'Metro, Apartemen Panoramic, Pasir Impun Atas, Cijambe Atas', display_order: 8 },
+                { id: 9, zone_name: 'Zone I', price: 30000, label: 'Zone I (Rp 30.000)', detail: 'Stasiun Kiaracondong, Jatinangor, Rancaekek, Terminal Cicaheum, Gasibu, Gedung Sate', display_order: 9 },
+                { id: 10, zone_name: 'Zone J', price: 35000, label: 'Zone J (Rp 35.000)', detail: 'Perempatan Buah Batu, Cicalengka', display_order: 10 },
+                { id: 11, zone_name: 'Zone K', price: 40000, label: 'Zone K (Rp 40.000)', detail: 'Stasiun Bandung, Baltos, Dago Bawah, Dipati Ukur, Cihampelas, Dayeuhkolot, Mohammad Toha, Nagreg', display_order: 11 },
+                { id: 12, zone_name: 'Zone L', price: 50000, label: 'Zone L (Rp 50.000)', detail: 'Stasiun Cimahi, Pasteur, Banjaran, Dago Atas, Terminal Leuwi Panjang, Pasir Koja, Bojongsoang', display_order: 12 },
+                { id: 13, zone_name: 'Zone M', price: 60000, label: 'Zone M (Rp 60.000)', detail: 'Stasiun Padalarang, Soreang, Lembang, Margahayu Kopo, Ciparay, Majalaya', display_order: 13 }
+            ];
+
+            const luarKotaData = [
+                { id: 1, name: 'Garut Kota', price: 'Free', pos: [-7.2279, 107.9087], display_order: 1 },
+                { id: 2, name: 'Tasik Kota', price: 'Free', pos: [-7.3274, 108.2140], display_order: 2 },
+                { id: 3, name: 'Singaparna', price: 'Free', pos: [-7.3486, 108.1118], display_order: 3 },
+                { id: 4, name: 'Sumedang Barat', price: 'Free', pos: [-6.9018, 107.8206], display_order: 4 },
+                { id: 5, name: 'Subang Ciater', price: 'Free', pos: [-6.7371, 107.6585], display_order: 5 },
+                { id: 6, name: 'Cianjur Kota', price: 'Free', pos: [-6.8168, 107.1425], display_order: 6 },
+                { id: 7, name: 'Garut Selatan', price: 'Rp 15.000', pos: [-7.6416, 107.6974], display_order: 7 },
+                { id: 8, name: 'Pangandaran', price: 'Rp 15.000 / Rp 35.000', pos: [-7.6975, 108.6493], display_order: 8 },
+                { id: 9, name: 'Ciamis', price: 'Rp 15.000', pos: [-7.3253, 108.3533], display_order: 9 },
+                { id: 10, name: 'Tasik Selatan', price: 'Rp 15.000', pos: [-7.7478, 108.0125], display_order: 10 },
+                { id: 11, name: 'Cianjur Selatan', price: 'Rp 15.000', pos: [-7.4526, 107.1517], display_order: 11 },
+                { id: 12, name: 'Sumedang Kota', price: 'Rp 15.000', pos: [-6.8375, 107.9258], display_order: 12 },
+                { id: 13, name: 'Banjar', price: 'Rp 20.000', pos: [-7.3750, 108.5322], display_order: 13 },
+                { id: 14, name: 'Kuningan', price: 'Rp 20.000', pos: [-6.9757, 108.4800], display_order: 14 },
+                { id: 15, name: 'Majalengka', price: 'Rp 20.000', pos: [-6.8365, 108.2274], display_order: 15 },
+                { id: 16, name: 'Subang Kota', price: 'Rp 25.000', pos: [-6.5683, 107.7607], display_order: 16 },
+                { id: 17, name: 'Purwakarta', price: 'Rp 25.000', pos: [-6.5562, 107.4423], display_order: 17 },
+                { id: 18, name: 'Cikampek', price: 'Rp 25.000', pos: [-6.4026, 107.4560], display_order: 18 },
+                { id: 19, name: 'Karawang Kota', price: 'Rp 30.000', pos: [-6.3079, 107.2917], display_order: 19 },
+                { id: 20, name: 'Subang Utara', price: 'Rp 30.000', pos: [-6.2829, 107.8173], display_order: 20 },
+                { id: 21, name: 'Indramayu', price: 'Rp 30.000', pos: [-6.3275, 108.3249], display_order: 21 },
+                { id: 22, name: 'Cikarang', price: 'Rp 30.000', pos: [-6.2911, 107.1706], display_order: 22 },
+                { id: 23, name: 'Sukabumi', price: 'Rp 35.000', pos: [-6.9200, 106.9275], display_order: 23 },
+                { id: 24, name: 'Bogor', price: 'Rp 35.000', pos: [-6.5971, 106.8060], display_order: 24 },
+                { id: 25, name: 'Depok', price: 'Rp 35.000', pos: [-6.4025, 106.7942], display_order: 25 },
+                { id: 26, name: 'Kota Bekasi', price: 'Rp 35.000', pos: [-6.2383, 106.9756], display_order: 26 },
+                { id: 27, name: 'Jakarta', price: 'Rp 40.000', pos: [-6.2088, 106.8456], display_order: 27 },
+                { id: 28, name: 'Tegal', price: 'Rp 40.000', pos: [-6.8694, 109.1402], display_order: 28 },
+                { id: 29, name: 'Brebes', price: 'Rp 40.000', pos: [-6.8706, 109.0436], display_order: 29 },
+                { id: 30, name: 'Tangerang', price: 'Rp 40.000', pos: [-6.1702, 106.6403], display_order: 30 },
+                { id: 31, name: 'Cilacap', price: 'Rp 45.000', pos: [-7.7118, 109.0069], display_order: 31 },
+                { id: 32, name: 'Serang', price: 'Rp 50.000', pos: [-6.1200, 106.1503], display_order: 32 },
+                { id: 33, name: 'Banyumas', price: 'Rp 50.000', pos: [-7.5256, 109.2968], display_order: 33 },
+                { id: 34, name: 'Pemalang', price: 'Rp 50.000', pos: [-6.8887, 109.3803], display_order: 34 }
+            ];
+
+            // Clean existing to avoid primary key/unique clashes, then upsert
+            const { error: err1 } = await supabase.from('nyetor_pricing').upsert(pricingData);
+            if (err1) throw err1;
+
+            const { error: err2 } = await supabase.from('nyetor_shipping_zones').upsert(zonesData);
+            if (err2) throw err2;
+
+            const { error: err3 } = await supabase.from('nyetor_luar_kota').upsert(luarKotaData);
+            if (err3) throw err3;
+
+            const fleetData = [
+                // Bebek
+                { bike_id: 'jupiter_z', plate: 'D 1234 AB', status: 'Tersedia', notes: 'Garasi 1' },
+                { bike_id: 'jupiter_z', plate: 'D 5678 CD', status: 'Disewa', notes: 'Penyewa Manisi' },
+                
+                // Super Ekonomis
+                { bike_id: 'mio_m3', plate: 'D 1111 SE', status: 'Tersedia', notes: '' },
+                { bike_id: 'mio_m3', plate: 'D 2222 SE', status: 'Tersedia', notes: '' },
+                { bike_id: 'beat_pop', plate: 'D 3333 SE', status: 'Tersedia', notes: '' },
+                
+                // Ekonomis
+                { bike_id: 'genio', plate: 'D 4444 EK', status: 'Tersedia', notes: '' },
+                { bike_id: 'genio', plate: 'D 5555 EK', status: 'Disewa', notes: '' },
+                { bike_id: 'beat_deluxe', plate: 'D 6666 EK', status: 'Tersedia', notes: '' },
+                { bike_id: 'beat_deluxe', plate: 'D 7777 EK', status: 'Servis', notes: 'Ganti oli' },
+                { bike_id: 'beat_street', plate: 'D 8888 EK', status: 'Tersedia', notes: '' },
+                { bike_id: 'scoopy_2023', plate: 'D 9999 EK', status: 'Tersedia', notes: '' },
+                
+                // Silver
+                { bike_id: 'scoopy_keyless', plate: 'D 1010 SL', status: 'Tersedia', notes: '' },
+                { bike_id: 'gear_matic', plate: 'D 2020 SL', status: 'Tersedia', notes: '' },
+                { bike_id: 'vario_led_old', plate: 'D 3030 SL', status: 'Tersedia', notes: '' },
+                { bike_id: 'fazzio_keyless', plate: 'D 4040 SL', status: 'Tersedia', notes: '' },
+                
+                // Gold
+                { bike_id: 'nmax_old', plate: 'D 5050 GD', status: 'Tersedia', notes: '' },
+                { bike_id: 'aerox', plate: 'D 6060 GD', status: 'Tersedia', notes: '' },
+                { bike_id: 'lexi_abs', plate: 'D 7070 GD', status: 'Tersedia', notes: '' },
+                { bike_id: 'nmax_keyless', plate: 'D 8080 GD', status: 'Tersedia', notes: '' },
+                
+                // Unit Tambahan
+                { bike_id: 'beat_karbu', plate: 'D 9090 UT', status: 'Tersedia', notes: '' },
+                { bike_id: 'fino', plate: 'D 1212 UT', status: 'Tersedia', notes: '' },
+                { bike_id: 'vario_kzr', plate: 'D 1313 UT', status: 'Tersedia', notes: '' },
+                { bike_id: 'beat_2018', plate: 'D 1414 UT', status: 'Tersedia', notes: '' },
+                { bike_id: 'vario_160_keyless', plate: 'D 1515 UT', status: 'Tersedia', notes: '' }
+            ];
+
+            const { error: err4 } = await supabase.from('nyetor_fleet').upsert(fleetData, { onConflict: 'plate' });
+            if (err4) throw err4;
+
+            showToast("Database cloud berhasil disinkronkan secara menyeluruh!", "success");
+            loadFromSupabase();
+        } catch (e) {
+            console.error(e);
+            showToast("Gagal sinkronisasi database: " + e.message, "error");
         }
     };
 
@@ -385,10 +648,11 @@ export default function AdminPanel({ onClose }) {
             super_ekonomis: 'SUPER EKONOMIS',
             ekonomis: 'EKONOMIS UNIT',
             silver: 'SILVER UNIT',
+            gold: 'GOLD UNIT',
             unit_tambahan: 'UNIT TAMBAHAN'
         };
 
-        const categoriesToPrint = ['super_ekonomis', 'unit_bebek', 'ekonomis', 'silver', 'unit_tambahan'];
+        const categoriesToPrint = ['super_ekonomis', 'unit_bebek', 'ekonomis', 'silver', 'gold', 'unit_tambahan'];
 
         categoriesToPrint.forEach((catId, pageIdx) => {
             const list = dbPricing.filter(b => b.category === catId);
@@ -1660,33 +1924,45 @@ export default function AdminPanel({ onClose }) {
                     color: var(--text-main) !important;
                 }
                 
-                /* Wildcard selectors to target Tailwind classes without backslash syntax problems */
+                /* Wildcard background overrides */
                 .light-mode-active div[class*="bg-zinc-"],
                 .light-mode-active div[class*="bg-[#"],
                 .light-mode-active form[class*="bg-zinc-"],
                 .light-mode-active form[class*="bg-[#"],
                 .light-mode-active nav[class*="bg-zinc-"],
-                .light-mode-active button[class*="bg-zinc-"] {
+                .light-mode-active section[class*="bg-zinc-"],
+                .light-mode-active table[class*="bg-zinc-"],
+                .light-mode-active thead[class*="bg-zinc-"],
+                .light-mode-active tr[class*="bg-zinc-"],
+                .light-mode-active td[class*="bg-zinc-"] {
                     background-color: var(--bg-card) !important;
                     border-color: var(--border-color) !important;
                     color: var(--text-main) !important;
                 }
                 
+                /* Force any tag inside light-mode-active that has white or zinc text to be dark grey */
+                .light-mode-active [class*="text-white"],
+                .light-mode-active [class*="text-zinc-"] {
+                    color: var(--text-muted) !important;
+                }
+
                 .light-mode-active h1,
                 .light-mode-active h2,
                 .light-mode-active h3,
                 .light-mode-active h4,
-                .light-mode-active th {
+                .light-mode-active h5,
+                .light-mode-active th,
+                .light-mode-active td {
                     color: var(--text-main) !important;
                 }
                 
-                .light-mode-active span[class*="text-zinc-"],
-                .light-mode-active p[class*="text-zinc-"],
-                .light-mode-active label[class*="text-zinc-"],
-                .light-mode-active div[class*="text-zinc-"] {
+                /* Table headers override */
+                .light-mode-active th {
+                    background-color: #f9fafb !important;
                     color: var(--text-muted) !important;
+                    border-bottom: 2px solid var(--border-color) !important;
                 }
-                
+
                 .light-mode-active input,
                 .light-mode-active select,
                 .light-mode-active textarea {
@@ -1707,15 +1983,29 @@ export default function AdminPanel({ onClose }) {
                     border-color: var(--border-color) !important;
                 }
                 
-                /* Keep the primary blue background buttons working */
+                /* Preserve white text on colored buttons (like primary blue, delete red, status badges, etc.) */
                 .light-mode-active button[class*="bg-[#004aad]"],
-                .light-mode-active .bg-\\[\\#004aad\\] {
-                    background-color: #004aad !important;
+                .light-mode-active button[class*="bg-blue-"],
+                .light-mode-active button[class*="bg-rose-"],
+                .light-mode-active button[class*="bg-red-"],
+                .light-mode-active button[class*="bg-emerald-"],
+                .light-mode-active button[class*="bg-green-"],
+                .light-mode-active button[class*="bg-indigo-"],
+                .light-mode-active button[class*="bg-amber-"],
+                .light-mode-active button.btn,
+                .light-mode-active .btn,
+                .light-mode-active [class*="bg-rose-500"] *,
+                .light-mode-active [class*="bg-rose-500"],
+                .light-mode-active [class*="bg-emerald-500"] *,
+                .light-mode-active [class*="bg-emerald-500"],
+                .light-mode-active [class*="bg-blue-600"] *,
+                .light-mode-active [class*="bg-blue-600"] {
                     color: #ffffff !important;
                 }
-                
-                /* Keep the primary gradient buttons working */
-                .light-mode-active .btn {
+
+                /* Fix text colors inside primary gradient buttons */
+                .light-mode-active .bg-gradient-to-r *,
+                .light-mode-active button.bg-gradient-to-r {
                     color: #ffffff !important;
                 }
                 
@@ -1775,9 +2065,9 @@ export default function AdminPanel({ onClose }) {
                     </button>
                     <button 
                         onClick={onClose} 
-                        className="text-zinc-400 hover:text-white text-xs md:text-sm font-medium transition-colors"
+                        className="bg-blue-600/10 border border-blue-500/20 text-blue-400 hover:bg-[#004aad] hover:text-white transition-all px-3.5 py-1.5 rounded-xl text-xs font-bold cursor-pointer"
                     >
-                        Halaman Utama
+                        Kembali ke Web
                     </button>
                     <button 
                         onClick={handleLogout} 
@@ -1874,16 +2164,76 @@ export default function AdminPanel({ onClose }) {
                                 <FileSpreadsheet size={18} />
                                 <span>Database Excel (XLSX)</span>
                             </button>
-                            <button 
-                                onClick={() => {
-                                    setActiveTab('pricing');
-                                    setIsMobileSidebarOpen(false);
-                                }}
-                                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-semibold text-sm transition-all ${activeTab === 'pricing' ? 'bg-[#004aad] text-white' : 'text-zinc-400 hover:bg-zinc-900/60 hover:text-zinc-200'}`}
-                            >
-                                <DollarSign size={18} />
-                                <span>Atur Tarif & Price List</span>
-                            </button>
+                            <div>
+                                <button
+                                    onClick={() => setIsTarifDropdownOpen(prev => !prev)}
+                                    className={`w-full flex items-center justify-between px-4 py-3 rounded-xl font-semibold text-sm transition-all cursor-pointer ${
+                                        ['pricing', 'shipping', 'luar_kota'].includes(activeTab)
+                                            ? 'bg-[#004aad]/10 text-[#004aad] border border-[#004aad]/20'
+                                            : 'text-zinc-400 hover:bg-zinc-900/60 hover:text-zinc-200'
+                                    }`}
+                                >
+                                    <div className="flex items-center gap-3">
+                                        <DollarSign size={18} />
+                                        <span>Tarif & Biaya</span>
+                                    </div>
+                                    <svg
+                                        className={`w-4 h-4 transition-transform duration-200 ${isTarifDropdownOpen ? 'rotate-180' : ''}`}
+                                        fill="none"
+                                        stroke="currentColor"
+                                        viewBox="0 0 24 24"
+                                    >
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                                    </svg>
+                                </button>
+                                
+                                {isTarifDropdownOpen && (
+                                    <div className="mt-1 ml-4 pl-3 border-l border-zinc-900 space-y-1">
+                                        <button
+                                            onClick={() => {
+                                                setActiveTab('pricing');
+                                                setIsMobileSidebarOpen(false);
+                                            }}
+                                            className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg font-semibold text-xs transition-all cursor-pointer ${
+                                                activeTab === 'pricing'
+                                                    ? 'bg-[#004aad] text-white font-bold'
+                                                    : 'text-zinc-400 hover:bg-zinc-900/40 hover:text-zinc-200'
+                                            }`}
+                                        >
+                                            <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
+                                            <span>Tarif Unit & Brosur</span>
+                                        </button>
+                                        <button
+                                            onClick={() => {
+                                                setActiveTab('shipping');
+                                                setIsMobileSidebarOpen(false);
+                                            }}
+                                            className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg font-semibold text-xs transition-all cursor-pointer ${
+                                                activeTab === 'shipping'
+                                                    ? 'bg-[#004aad] text-white font-bold'
+                                                    : 'text-zinc-400 hover:bg-zinc-900/40 hover:text-zinc-200'
+                                            }`}
+                                        >
+                                            <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span>
+                                            <span>Biaya Antar Jemput</span>
+                                        </button>
+                                        <button
+                                            onClick={() => {
+                                                setActiveTab('luar_kota');
+                                                setIsMobileSidebarOpen(false);
+                                            }}
+                                            className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg font-semibold text-xs transition-all cursor-pointer ${
+                                                activeTab === 'luar_kota'
+                                                    ? 'bg-[#004aad] text-white font-bold'
+                                                    : 'text-zinc-400 hover:bg-zinc-900/40 hover:text-zinc-200'
+                                            }`}
+                                        >
+                                            <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                                            <span>Biaya Keluar Kota</span>
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
                         </nav>
                     </div>
 
@@ -3257,6 +3607,230 @@ export default function AdminPanel({ onClose }) {
                         </div>
                     )}
 
+                    {activeTab === 'shipping' && (
+                        <div className="space-y-8 max-w-6xl">
+                            <div>
+                                <h1 className="text-3xl font-black text-white tracking-tight flex items-center gap-2">
+                                    <MapPin className="text-[#004aad]" size={28} />
+                                    <span>BIAYA ANTAR JEMPUT LOKAL</span>
+                                </h1>
+                                <p className="text-zinc-500 text-sm mt-1">
+                                    Sesuaikan zona biaya pengantaran unit (antar-jemput pulang pergi) untuk penyewa secara dinamis.
+                                </p>
+                            </div>
+                            
+                            <div className="bg-zinc-950 border border-zinc-900 rounded-2xl overflow-hidden shadow-xl">
+                                <div className="p-6 border-b border-zinc-900 bg-zinc-900/10">
+                                    <h3 className="text-base font-bold text-white uppercase tracking-wider">Daftar Zona Pengantaran</h3>
+                                </div>
+                                <div className="divide-y divide-zinc-900">
+                                    {dbShippingZones.length === 0 ? (
+                                        <div className="p-8 text-center text-zinc-500 text-sm">
+                                            Memuat data zona antar jemput...
+                                        </div>
+                                    ) : (
+                                        dbShippingZones.map(zone => {
+                                            return (
+                                                <div key={zone.id} className="p-6 flex flex-col lg:flex-row lg:items-center justify-between gap-6 hover:bg-zinc-900/10 transition-colors">
+                                                    <div className="flex-1 space-y-4">
+                                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                                            <div>
+                                                                <label className="block text-zinc-500 text-xs font-bold uppercase mb-1">Nama Zona</label>
+                                                                <input 
+                                                                    type="text" 
+                                                                    className="w-full bg-zinc-900 border border-zinc-800 rounded-lg p-2.5 text-white font-bold"
+                                                                    value={zone.zone_name}
+                                                                    disabled
+                                                                />
+                                                            </div>
+                                                            <div>
+                                                                <label className="block text-zinc-500 text-xs font-bold uppercase mb-1">Biaya (Rupiah)</label>
+                                                                <input 
+                                                                    type="number" 
+                                                                    className="w-full bg-zinc-900 border border-zinc-800 rounded-lg p-2.5 text-white font-bold focus:border-[#004aad] focus:outline-none"
+                                                                    value={zone.price}
+                                                                    onChange={(e) => {
+                                                                        const val = e.target.value;
+                                                                        setDbShippingZones(prev => prev.map(z => z.id === zone.id ? { ...z, price: val } : z));
+                                                                    }}
+                                                                />
+                                                            </div>
+                                                            <div>
+                                                                <label className="block text-zinc-500 text-xs font-bold uppercase mb-1">Label Tampilan</label>
+                                                                <input 
+                                                                    type="text" 
+                                                                    className="w-full bg-zinc-900 border border-zinc-800 rounded-lg p-2.5 text-white font-semibold focus:border-[#004aad] focus:outline-none"
+                                                                    value={zone.label}
+                                                                    onChange={(e) => {
+                                                                        const val = e.target.value;
+                                                                        setDbShippingZones(prev => prev.map(z => z.id === zone.id ? { ...z, label: val } : z));
+                                                                    }}
+                                                                />
+                                                            </div>
+                                                        </div>
+                                                        <div>
+                                                            <label className="block text-zinc-500 text-xs font-bold uppercase mb-1">Deskripsi Cakupan Area</label>
+                                                            <textarea 
+                                                                className="w-full bg-zinc-900 border border-zinc-800 rounded-lg p-2.5 text-white text-sm focus:border-[#004aad] focus:outline-none"
+                                                                rows={2}
+                                                                value={zone.detail}
+                                                                onChange={(e) => {
+                                                                    const val = e.target.value;
+                                                                    setDbShippingZones(prev => prev.map(z => z.id === zone.id ? { ...z, detail: val } : z));
+                                                                }}
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                    <div className="shrink-0">
+                                                        <button 
+                                                            onClick={() => handleSaveShippingZone(zone.id, zone.price, zone.label, zone.detail)}
+                                                            className="bg-[#004aad] hover:bg-blue-600 text-white font-bold text-xs py-3 px-6 rounded-xl shadow transition-colors cursor-pointer w-full lg:w-auto"
+                                                        >
+                                                            SIMPAN
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {activeTab === 'luar_kota' && (
+                        <div className="space-y-8 max-w-6xl">
+                            <div>
+                                <h1 className="text-3xl font-black text-white tracking-tight flex items-center gap-2">
+                                    <ShieldAlert className="text-[#004aad]" size={28} />
+                                    <span>BIAYA KELUAR KOTA (CHARGE LUAR AREA)</span>
+                                </h1>
+                                <p className="text-zinc-500 text-sm mt-1">
+                                    Kelola daftar wilayah luar Bandung Raya beserta tarif tambahan sekali bayar yang diijinkan.
+                                </p>
+                            </div>
+
+                            {/* Add New Location Form */}
+                            <div className="bg-zinc-950 border border-zinc-900 p-6 rounded-2xl shadow-xl">
+                                <h3 className="text-base font-bold text-white uppercase tracking-wider mb-4">Tambah Lokasi Luar Kota Baru</h3>
+                                <form onSubmit={handleAddLuarKota} className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+                                    <div>
+                                        <label className="block text-zinc-500 text-xs font-bold uppercase mb-1">Nama Wilayah / Kota</label>
+                                        <input 
+                                            type="text" 
+                                            placeholder="Contoh: Purwakarta"
+                                            className="w-full bg-zinc-900 border border-zinc-800 rounded-lg p-2.5 text-white text-sm focus:border-[#004aad] focus:outline-none"
+                                            value={newLuarKota.name}
+                                            onChange={(e) => setNewLuarKota({ ...newLuarKota, name: e.target.value })}
+                                            required
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-zinc-500 text-xs font-bold uppercase mb-1">Biaya Tambahan</label>
+                                        <input 
+                                            type="text" 
+                                            placeholder="Contoh: Rp 25.000 atau Free"
+                                            className="w-full bg-zinc-900 border border-zinc-800 rounded-lg p-2.5 text-white text-sm focus:border-[#004aad] focus:outline-none"
+                                            value={newLuarKota.price}
+                                            onChange={(e) => setNewLuarKota({ ...newLuarKota, price: e.target.value })}
+                                            required
+                                        />
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        <div>
+                                            <label className="block text-zinc-500 text-xs font-bold uppercase mb-1">Latitude</label>
+                                            <input 
+                                                type="number" 
+                                                step="0.0001"
+                                                className="w-full bg-zinc-900 border border-zinc-800 rounded-lg p-2.5 text-white text-xs focus:border-[#004aad] focus:outline-none"
+                                                value={newLuarKota.lat}
+                                                onChange={(e) => setNewLuarKota({ ...newLuarKota, lat: e.target.value })}
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-zinc-500 text-xs font-bold uppercase mb-1">Longitude</label>
+                                            <input 
+                                                type="number" 
+                                                step="0.0001"
+                                                className="w-full bg-zinc-900 border border-zinc-800 rounded-lg p-2.5 text-white text-xs focus:border-[#004aad] focus:outline-none"
+                                                value={newLuarKota.lng}
+                                                onChange={(e) => setNewLuarKota({ ...newLuarKota, lng: e.target.value })}
+                                            />
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <button 
+                                            type="submit"
+                                            className="w-full bg-[#004aad] hover:bg-blue-600 text-white font-bold text-xs py-3 px-6 rounded-xl shadow transition-colors cursor-pointer"
+                                        >
+                                            TAMBAH LOKASI
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                            
+                            <div className="bg-zinc-950 border border-zinc-900 rounded-2xl overflow-hidden shadow-xl">
+                                <div className="p-6 border-b border-zinc-900 bg-zinc-900/10">
+                                    <h3 className="text-base font-bold text-white uppercase tracking-wider">Daftar Biaya Wilayah Luar Area</h3>
+                                </div>
+                                <div className="divide-y divide-zinc-900">
+                                    {dbLuarKota.length === 0 ? (
+                                        <div className="p-8 text-center text-zinc-500 text-sm">
+                                            Memuat data wilayah luar kota...
+                                        </div>
+                                    ) : (
+                                        dbLuarKota.map(item => {
+                                            return (
+                                                <div key={item.id} className="p-6 flex flex-col md:flex-row md:items-center justify-between gap-6 hover:bg-zinc-900/10 transition-colors">
+                                                    <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                        <div>
+                                                            <label className="block text-zinc-500 text-xs font-bold uppercase mb-1">Nama Wilayah</label>
+                                                            <input 
+                                                                type="text" 
+                                                                className="w-full bg-zinc-900 border border-zinc-800 rounded-lg p-2.5 text-white font-bold focus:border-[#004aad] focus:outline-none"
+                                                                value={item.name}
+                                                                onChange={(e) => {
+                                                                    const val = e.target.value;
+                                                                    setDbLuarKota(prev => prev.map(lk => lk.id === item.id ? { ...lk, name: val } : lk));
+                                                                }}
+                                                            />
+                                                        </div>
+                                                        <div>
+                                                            <label className="block text-zinc-500 text-xs font-bold uppercase mb-1">Biaya Tambahan</label>
+                                                            <input 
+                                                                type="text" 
+                                                                className="w-full bg-zinc-900 border border-zinc-800 rounded-lg p-2.5 text-white font-bold focus:border-[#004aad] focus:outline-none"
+                                                                value={item.price}
+                                                                onChange={(e) => {
+                                                                    const val = e.target.value;
+                                                                    setDbLuarKota(prev => prev.map(lk => lk.id === item.id ? { ...lk, price: val } : lk));
+                                                                }}
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex items-center gap-3 shrink-0">
+                                                        <button 
+                                                            onClick={() => handleSaveLuarKota(item.id, item.name, item.price)}
+                                                            className="bg-[#004aad] hover:bg-blue-600 text-white font-bold text-xs py-3 px-6 rounded-xl shadow transition-colors cursor-pointer w-full md:w-auto"
+                                                        >
+                                                            SIMPAN
+                                                        </button>
+                                                        <button 
+                                                            onClick={() => handleDeleteLuarKota(item.id)}
+                                                            className="bg-rose-500/10 border border-rose-500/20 text-rose-400 hover:bg-rose-500 hover:text-white font-bold text-xs py-3 px-6 rounded-xl shadow transition-all cursor-pointer w-full md:w-auto"
+                                                        >
+                                                            HAPUS
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
                     {/* SETTINGS CREDENTIALS TAB */}
                     {activeTab === 'settings' && (
                         <div className="space-y-8 max-w-lg">
@@ -3335,6 +3909,17 @@ export default function AdminPanel({ onClose }) {
                                             {creds.url || 'Tidak dikonfigurasi'}
                                         </span>
                                     </div>
+
+                                    <div className="pt-2">
+                                        <span className="block text-zinc-500 text-xs font-bold uppercase mb-2">Sinkronisasi Skema & Tarif</span>
+                                        <button 
+                                            onClick={handleSyncDatabase}
+                                            className="w-full bg-[#004aad] hover:bg-blue-600 text-white font-bold text-xs py-3 px-4 rounded-xl shadow transition-colors cursor-pointer"
+                                        >
+                                            🚀 SINKRONKAN SELURUH DATA BASE (RE-SEED)
+                                        </button>
+                                    </div>
+
                                     <p className="text-[10px] text-zinc-500 leading-relaxed">
                                         * Koneksi database diatur secara internal oleh developer melalui file <code>.env</code> di server.
                                     </p>
@@ -3607,6 +4192,25 @@ export default function AdminPanel({ onClose }) {
                             </form>
                         </motion.div>
                     </div>
+                )}
+            </AnimatePresence>
+
+            {/* Custom Premium Toast Notification */}
+            <AnimatePresence>
+                {toast.show && (
+                    <motion.div
+                        initial={{ opacity: 0, y: 50, scale: 0.9 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: 20, scale: 0.9 }}
+                        className={`fixed bottom-5 right-5 z-[200] px-5 py-3.5 rounded-xl shadow-2xl border text-sm font-bold flex items-center gap-3 ${
+                            toast.type === 'success'
+                                ? 'bg-[#10b981] text-white border-[#34d399]'
+                                : 'bg-[#f43f5e] text-white border-[#fb7185]'
+                        }`}
+                    >
+                        <Check size={18} />
+                        <span>{toast.message}</span>
+                    </motion.div>
                 )}
             </AnimatePresence>
         </div>

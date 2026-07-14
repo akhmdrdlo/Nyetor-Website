@@ -2,6 +2,7 @@ import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import { Info, Map as MapIcon, ShieldAlert } from 'lucide-react';
+import { SHIPPING_ZONES } from '../data';
 
 // Fix for default marker icon in React-Leaflet
 import icon from 'leaflet/dist/images/marker-icon.png';
@@ -70,17 +71,36 @@ const LUAR_KOTA_DATA = [
     { name: "Pemalang", pos: [-6.8887, 109.3803], price: "Rp 50.000" }
 ];
 
-const SEBANDUNGEUN_DATA = [
-    { name: "Manisi & Cipadung", pos: [-6.930, 107.715], price: "Rp 5.000" },
-    { name: "Panyilekan & Cimekar", pos: [-6.940, 107.720], price: "Rp 7.000" },
-    { name: "Cilengkrang Bawah", pos: [-6.920, 107.710], price: "Rp 10.000" },
-    { name: "Ujung Berung & Gedebage", pos: [-6.915, 107.695], price: "Rp 11.000" },
-    { name: "Cinunuk & Cilengkrang Atas", pos: [-6.935, 107.735], price: "Rp 13.000" },
-    { name: "Cileunyi & Tegaluar", pos: [-6.945, 107.755], price: "Rp 15.000" },
-    { name: "Buah Batu", pos: [-6.955, 107.635], price: "Rp 35.000" }
-];
+const ZONE_COORDS = {
+    'Zone A': [-6.935, 107.712],
+    'Zone B': [-6.920, 107.725],
+    'Zone C': [-6.905, 107.715],
+    'Zone D': [-6.915, 107.690],
+    'Zone E': [-6.940, 107.732],
+    'Zone F': [-6.955, 107.765],
+    'Zone G': [-6.925, 107.675],
+    'Zone H': [-6.938, 107.665],
+    'Zone I': [-6.920, 107.636],
+    'Zone J': [-6.955, 107.630],
+    'Zone K': [-6.915, 107.608],
+    'Zone L': [-6.890, 107.575],
+    'Zone M': [-6.825, 107.620]
+};
 
-export default function CoverageArea() {
+export default function CoverageArea({ shippingZones = [], luarKotaData = [] }) {
+    const activeZones = shippingZones && shippingZones.length > 0 ? shippingZones : SHIPPING_ZONES;
+
+    const activeLuarKota = luarKotaData && luarKotaData.length > 0 ? luarKotaData : LUAR_KOTA_DATA;
+
+    // Group out-of-town cities by price for the text overview list
+    const groupedByPrice = {};
+    activeLuarKota.forEach(loc => {
+        if (!groupedByPrice[loc.price]) {
+            groupedByPrice[loc.price] = [];
+        }
+        groupedByPrice[loc.price].push(loc.name);
+    });
+
     return (
         <section className="py-20 bg-gray-50 border-t border-gray-200" id="coverage-area">
             <div className="container mx-auto px-4">
@@ -112,29 +132,38 @@ export default function CoverageArea() {
                                     attribution='&copy; OpenStreetMap'
                                     url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                                 />
-                                {SEBANDUNGEUN_DATA.map((loc, idx) => (
-                                    <Marker key={idx} position={loc.pos}>
-                                        <Popup>
-                                            <div className="text-center">
-                                                <strong className="block text-[#004aad]">{loc.name}</strong>
-                                                <span className="font-bold text-gray-700">{loc.price}</span>
-                                            </div>
-                                        </Popup>
-                                    </Marker>
-                                ))}
+                                {activeZones.map((loc, idx) => {
+                                    const coords = ZONE_COORDS[loc.zone_name] || [-6.930, 107.715];
+                                    return (
+                                        <Marker key={idx} position={coords}>
+                                            <Popup>
+                                                <div className="text-center max-w-xs">
+                                                    <strong className="block text-[#004aad] uppercase font-black">{loc.zone_name}</strong>
+                                                    <span className="font-bold text-gray-700 block text-xs">Rp {Number(loc.price).toLocaleString('id-ID')}</span>
+                                                    <p className="text-[10px] text-gray-500 mt-1 leading-normal">{loc.detail}</p>
+                                                </div>
+                                            </Popup>
+                                        </Marker>
+                                    );
+                                })}
                             </MapContainer>
                         </div>
 
                         {/* Text List */}
-                        <div className="p-6 flex-1 bg-white">
-                            <ul className="space-y-4">
-                                {SEBANDUNGEUN_DATA.map((loc, idx) => (
-                                    <li key={idx} className="flex justify-between items-center text-sm font-medium border-b border-dashed border-gray-200 pb-2 last:border-0 last:pb-0">
-                                        <span className="text-gray-700">{loc.name}</span>
-                                        <span className="font-black text-[#004aad] bg-blue-50 px-3 py-1 rounded-full">{loc.price}</span>
-                                    </li>
+                        <div className="p-6 flex-1 bg-white flex flex-col justify-between overflow-hidden">
+                            <div className="space-y-4 max-h-[450px] overflow-y-auto pr-2 custom-scrollbar">
+                                {activeZones.map((loc, idx) => (
+                                    <div key={idx} className="border-b border-gray-100 pb-3 last:border-0 last:pb-0">
+                                        <div className="flex justify-between items-center text-sm font-bold">
+                                            <span className="text-gray-900 font-extrabold uppercase">{loc.zone_name || loc.label?.split(' ')[0] || `Zone ${String.fromCharCode(65 + idx)}`}</span>
+                                            <span className="font-black text-[#004aad] bg-blue-50 px-3 py-1 rounded-full text-xs shrink-0">
+                                                Rp {Number(loc.price).toLocaleString('id-ID')}
+                                            </span>
+                                        </div>
+                                        <p className="text-[11px] text-gray-500 mt-1 leading-relaxed">{loc.detail}</p>
+                                    </div>
                                 ))}
-                            </ul>
+                            </div>
                         </div>
                     </div>
 
@@ -154,7 +183,7 @@ export default function CoverageArea() {
                                     attribution='&copy; OpenStreetMap'
                                     url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                                 />
-                                {LUAR_KOTA_DATA.map((loc, idx) => (
+                                {activeLuarKota.map((loc, idx) => (
                                     <Marker key={idx} position={loc.pos}>
                                         <Popup>
                                             <div className="text-center">
@@ -174,7 +203,7 @@ export default function CoverageArea() {
                                     <Info size={18} /> KETENTUAN PENTING:
                                 </h5>
                                 <ul className="text-xs space-y-2 list-decimal list-inside font-medium leading-relaxed">
-                                    <li><strong>Varian Super Ekonomis</strong> <span className="text-red-600">tldak diijinkan</span> ke luar kota.</li>
+                                    <li><strong>Varian Super Ekonomis</strong> <span className="text-red-600">tidak diijinkan</span> ke luar kota.</li>
                                     <li>Konfirmasi terlebih dahulu kepada admin.</li>
                                     <li>Biaya dibayarkan 1 kali di awal bersamaan rental.</li>
                                     <li><span className="text-red-600 font-bold">DILARANG</span> membawa unit selain pada list resmi.</li>
@@ -183,42 +212,14 @@ export default function CoverageArea() {
                             </div>
 
                             <div className="text-xs space-y-3 text-gray-700 h-40 overflow-y-auto pr-2 custom-scrollbar flex-1 border border-gray-100 rounded-xl p-3 bg-gray-50/50">
-                                <div className="flex justify-between border-b border-gray-200 pb-2">
-                                    <span className="pr-4 leading-relaxed">Garut Kota, Tasik Kota, Singaparna, Sumedang Barat, Subang Ciater, Cianjur Kota</span> 
-                                    <strong className="text-green-600 shrink-0 self-center bg-green-100 px-2 py-1 rounded-md">Free</strong>
-                                </div>
-                                <div className="flex justify-between border-b border-gray-200 pb-2">
-                                    <span className="pr-4 leading-relaxed">Garut Sel, Pangandaran, Ciamis, Tasik Sel, Cianjur Sel, Sumedang Kota</span> 
-                                    <strong className="text-orange-600 shrink-0 self-center">Rp 15.000</strong>
-                                </div>
-                                <div className="flex justify-between border-b border-gray-200 pb-2">
-                                    <span className="pr-4 leading-relaxed">Banjar, Kuningan, Majalengka</span> 
-                                    <strong className="text-orange-600 shrink-0 self-center">Rp 20.000</strong>
-                                </div>
-                                <div className="flex justify-between border-b border-gray-200 pb-2">
-                                    <span className="pr-4 leading-relaxed">Subang Kota, Purwakarta, Cikampek</span> 
-                                    <strong className="text-orange-600 shrink-0 self-center">Rp 25.000</strong>
-                                </div>
-                                <div className="flex justify-between border-b border-gray-200 pb-2">
-                                    <span className="pr-4 leading-relaxed">Karawang Kota - Subang Utara, Indramayu, Cikarang</span> 
-                                    <strong className="text-orange-600 shrink-0 self-center">Rp 30.000</strong>
-                                </div>
-                                <div className="flex justify-between border-b border-gray-200 pb-2">
-                                    <span className="pr-4 leading-relaxed">Sukabumi, Bogor, Depok, Kota Bekasi</span> 
-                                    <strong className="text-orange-600 shrink-0 self-center">Rp 35.000</strong>
-                                </div>
-                                <div className="flex justify-between border-b border-gray-200 pb-2">
-                                    <span className="pr-4 leading-relaxed">Jakarta, Tegal, Brebes, Tangerang</span> 
-                                    <strong className="text-orange-600 shrink-0 self-center">Rp 40.000</strong>
-                                </div>
-                                <div className="flex justify-between border-b border-gray-200 pb-2">
-                                    <span className="pr-4 leading-relaxed">Cilacap</span> 
-                                    <strong className="text-orange-600 shrink-0 self-center">Rp 45.000</strong>
-                                </div>
-                                <div className="flex justify-between">
-                                    <span className="pr-4 leading-relaxed">Serang, Banyumas, Pemalang</span> 
-                                    <strong className="text-orange-600 shrink-0 self-center">Rp 50.000</strong>
-                                </div>
+                                {Object.entries(groupedByPrice).map(([price, cities], idx) => (
+                                    <div key={idx} className="flex justify-between border-b border-gray-200 pb-2 last:border-0 last:pb-0">
+                                        <span className="pr-4 leading-relaxed">{cities.join(', ')}</span> 
+                                        <strong className={`${price.toLowerCase() === 'free' ? 'text-green-600 bg-green-100 px-2 py-1 rounded-md' : 'text-orange-600'} shrink-0 self-center`}>
+                                            {price}
+                                        </strong>
+                                    </div>
+                                ))}
                             </div>
                         </div>
                     </div>

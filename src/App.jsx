@@ -24,9 +24,12 @@ function App() {
   const [selectedBike, setSelectedBike] = useState(null);
   const [invoiceData, setInvoiceData] = useState(null);
   const [customCatalog, setCustomCatalog] = useState(null);
+  const [shippingZones, setShippingZones] = useState([]);
+  const [luarKotaData, setLuarKotaData] = useState([]);
+  const [fleet, setFleet] = useState([]);
   const invoiceRef = useRef();
 
-  // Load custom pricing from Supabase dynamically
+  // Load custom pricing, shipping zones, out-of-town, and fleet data from Supabase dynamically
   useEffect(() => {
     if (!supabase) return;
 
@@ -66,16 +69,71 @@ function App() {
       }
     };
 
-    fetchPricing();
+    const fetchShippingAndLuarKota = async () => {
+      try {
+        // Fetch Shipping Zones
+        const { data: szData, error: szErr } = await supabase
+          .from('nyetor_shipping_zones')
+          .select('*')
+          .order('display_order', { ascending: true });
+        if (!szErr && szData) {
+          setShippingZones(szData);
+        }
 
-    // Subscribe to realtime pricing updates
+        // Fetch Luar Kota
+        const { data: lkData, error: lkErr } = await supabase
+          .from('nyetor_luar_kota')
+          .select('*')
+          .order('display_order', { ascending: true });
+        if (!lkErr && lkData) {
+          setLuarKotaData(lkData);
+        }
+      } catch (e) {
+        console.error("Failed to fetch shipping/luar kota data:", e);
+      }
+    };
+
+    const fetchFleet = async () => {
+      try {
+        const { data, error } = await supabase.from('nyetor_fleet').select('*');
+        if (!error && data) {
+          setFleet(data);
+        }
+      } catch (e) {
+        console.error("Failed to fetch fleet from Supabase:", e);
+      }
+    };
+
+    fetchPricing();
+    fetchShippingAndLuarKota();
+    fetchFleet();
+
+    // Subscribe to realtime updates
     const pricingChannel = supabase
       .channel('pricing-realtime')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'nyetor_pricing' }, fetchPricing)
       .subscribe();
 
+    const shippingChannel = supabase
+      .channel('shipping-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'nyetor_shipping_zones' }, fetchShippingAndLuarKota)
+      .subscribe();
+
+    const luarKotaChannel = supabase
+      .channel('luarkota-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'nyetor_luar_kota' }, fetchShippingAndLuarKota)
+      .subscribe();
+
+    const fleetChannel = supabase
+      .channel('fleet-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'nyetor_fleet' }, fetchFleet)
+      .subscribe();
+
     return () => {
       supabase.removeChannel(pricingChannel);
+      supabase.removeChannel(shippingChannel);
+      supabase.removeChannel(luarKotaChannel);
+      supabase.removeChannel(fleetChannel);
     };
   }, []);
 
@@ -167,11 +225,11 @@ function App() {
           <div id="catalog-section" className="block relative z-10">
             {/* Spacer to pull overlap if needed, or just container */}
             <div className="container">
-              <Catalog onSelectBike={handleSelectBike} customCatalog={customCatalog} />
+              <Catalog onSelectBike={handleSelectBike} customCatalog={customCatalog} fleet={fleet} />
             </div>
           </div>
 
-          <CoverageArea />
+          <CoverageArea shippingZones={shippingZones} luarKotaData={luarKotaData} />
 
           <Location />
 
@@ -191,6 +249,7 @@ function App() {
             selectedBike={selectedBike}
             onCancel={() => setView('catalog')}
             onSubmit={handleBookingSubmit}
+            shippingZones={shippingZones}
           />
         </div>
       )}

@@ -3,7 +3,9 @@ import { motion } from 'framer-motion';
 import { AlertTriangle, Clock, MapPin, Briefcase, Calendar, AlertCircle, Plus, RefreshCw, Check } from 'lucide-react';
 import { SHIPPING_ZONES } from '../data';
 
-export default function BookingForm({ selectedBike, onCancel, onSubmit }) {
+export default function BookingForm({ selectedBike, onCancel, onSubmit, shippingZones = [] }) {
+    const zones = shippingZones && shippingZones.length > 0 ? shippingZones : SHIPPING_ZONES;
+
     const [formData, setFormData] = useState({
         name: '',
         phone: '',
@@ -35,7 +37,7 @@ export default function BookingForm({ selectedBike, onCancel, onSubmit }) {
 
     // Helper to get selected zone detail
 
-    const selectedZoneDetail = SHIPPING_ZONES.find(z => z.price === formData.selectedZonePrice)?.detail;
+    const selectedZoneDetail = zones.find(z => Number(z.price) === Number(formData.selectedZonePrice))?.detail;
 
     // Helper: Add Duration Chunk
     const addDuration = (hours) => {
@@ -127,7 +129,7 @@ export default function BookingForm({ selectedBike, onCancel, onSubmit }) {
         const finalTotal = totalPrice;
 
         // Get label for selected zone
-        const currentZone = SHIPPING_ZONES.find(z => z.price === formData.selectedZonePrice);
+        const currentZone = zones.find(z => Number(z.price) === Number(formData.selectedZonePrice));
         const zoneLabel = currentZone ? `${currentZone.label}` : '';
 
 
@@ -449,7 +451,7 @@ export default function BookingForm({ selectedBike, onCancel, onSubmit }) {
                                     value={formData.selectedZonePrice || ''}
                                 >
                                     <option value="" disabled>-- Pilih Area --</option>
-                                    {SHIPPING_ZONES.map((zone, idx) => (
+                                    {zones.map((zone, idx) => (
                                         <option key={idx} value={zone.price}>
                                             {zone.label} - {zone.detail.substring(0, 90)}
                                         </option>
